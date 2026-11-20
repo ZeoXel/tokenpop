@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap">
 <style>
-/* Layout: sticky picks bar; preset cards on the left; a sticky column on the right with the live session view and the per-layer mixer. */
+/* Layout: themes on top; a layer list on the left drives a voice picker with solo preview on the right; the full-session preview sits below the picker. */
 :root {
   --bg: #f4f2f7; --panel: #ffffff; --panel-2: #f8f6fb; --line: #e1dce8; --fg: #1c1922; --dim: #6c6578;
   --pop: #d2397f; --think: #4d5bd1; --tool: #9a6a00; --ok: #1d8450; --pick: #c98a00; --pop-soft: rgba(210, 57, 127, .10);
@@ -28,139 +28,177 @@ body {
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-block: 20px 32px;
 }
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
-.wrap { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
-h1 { font: 700 28px/1.1 var(--font-display); letter-spacing: -.02em; margin: 0; text-wrap: balance; }
+.wrap { max-width: 1240px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px 20px; }
+h1 { font: 700 28px/1.1 var(--font-display); letter-spacing: -.02em; margin: 0; }
 h1 span { color: var(--pop); }
 h2 { font: 600 15px/1.2 var(--font-display); margin: 0; }
-.intro { color: var(--dim); max-width: 72ch; margin: 4px 0 0; }
-
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; }
-.picks { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.intro { color: var(--dim); max-width: 62ch; margin: 4px 0 0; }
+.top-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); font-weight: 600; }
-.chip { font: 500 12.5px var(--font-ui); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; background: var(--panel-2); }
-.empty { color: var(--dim); font-size: 13px; }
-.btn { font: 600 13px var(--font-ui); border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.btn { font: 600 13px var(--font-ui); border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 8px; padding: 7px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
 .btn:hover { border-color: var(--dim); }
 .btn.primary { background: var(--pop); border-color: var(--pop); color: #fff; }
-.btn:focus-visible, .play:focus-visible, .pick:focus-visible, select:focus-visible, input:focus-visible + .sw, input[type=range]:focus-visible { outline: 2px solid var(--pop); outline-offset: 2px; }
-.vol { display: flex; align-items: center; gap: 8px; }
-input[type=range] { accent-color: var(--pop); }
-#vol { width: 96px; }
+.btn svg { width: 12px; height: 12px; }
 .status { font: 12px var(--font-mono); color: var(--dim); }
+:is(button, select, input):focus-visible { outline: 2px solid var(--pop); outline-offset: 2px; }
+input[type=range] { accent-color: var(--pop); }
 
-.layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 14px; align-items: start; }
-.side { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 70px); display: flex; flex-direction: column; gap: 12px; min-width: 0; max-height: calc(100vh - 86px); overflow-y: auto; }
-@media (max-width: 1040px) { .layout { grid-template-columns: 1fr; } .side { position: static; order: -1; max-height: none; overflow: visible; } }
+/* Themes */
+.themes { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.theme-row { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: thin; min-width: 0; }
+.theme { flex: none; font: 600 13px var(--font-ui); border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 999px; padding: 5px 12px; cursor: pointer; white-space: nowrap; }
+.theme:hover { border-color: var(--dim); }
+.theme[aria-pressed="true"] { border-color: var(--pop); background: var(--pop-soft); }
+.theme .star { color: var(--pick); margin-left: 4px; }
 
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px 11px; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
-.card.playing { border-color: var(--pop); box-shadow: 0 0 0 3px var(--pop-soft); }
-.card.picked { border-color: var(--pick); }
-.head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.name { font: 700 18px/1.15 var(--font-display); letter-spacing: -.01em; }
-.idx { font: 11px var(--font-mono); color: var(--dim); }
-.line { color: var(--dim); font-size: 13px; }
-.tags { display: flex; flex-wrap: wrap; gap: 5px; }
-.tag { font: 500 11px var(--font-mono); color: var(--dim); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; }
-.ctl { display: flex; align-items: center; gap: 10px; }
-.play { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--pop); color: #fff; cursor: pointer; display: grid; place-items: center; }
-.play svg { width: 13px; height: 13px; }
-.meter { flex: 1; min-width: 0; height: 36px; display: block; }
-.pick { flex: none; border: 1px solid var(--line); background: var(--panel-2); color: var(--dim); border-radius: 8px; padding: 6px 10px; font: 600 12.5px var(--font-ui); cursor: pointer; }
-.pick[aria-pressed="true"] { color: var(--pick); border-color: var(--pick); background: transparent; }
+.layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; min-width: 0; }
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding: 11px 14px; border-bottom: 1px solid var(--line); }
 
-/* Session view */
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
-.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--line); background: var(--panel-2); }
-.now { font: 12px var(--font-mono); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.now b { color: var(--fg); font-weight: 600; }
+/* Layer list */
+.layers { position: sticky; top: max(12px, env(safe-area-inset-top, 0px)); }
+@media (max-width: 900px) { .layers { position: static; } }
+.layer-list { list-style: none; margin: 0; padding: 6px; display: flex; flex-direction: column; gap: 2px; }
+.layer { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 9px; cursor: pointer; border: 1px solid transparent; }
+.layer:hover { background: var(--panel-2); }
+.layer.active { background: var(--pop-soft); border-color: var(--pop); }
+.layer .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.layer.off .dot { background: transparent; border: 1.5px solid var(--line); }
+.layer.hit .dot { box-shadow: 0 0 0 4px var(--pop-soft); }
+.layer-sel { all: unset; min-width: 0; display: flex; flex-direction: column; cursor: pointer; }
+.layer-sel b { font-weight: 600; font-size: 13.5px; }
+.layer-sel span { color: var(--dim); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.layer.off .layer-sel span { text-decoration: line-through; }
+.layer-sel:focus-visible { outline: 2px solid var(--pop); outline-offset: 4px; border-radius: 4px; }
+.tg { position: relative; display: inline-flex; cursor: pointer; }
+.tg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.sw { width: 30px; height: 18px; border-radius: 9px; background: var(--line); position: relative; transition: background .15s; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--panel); transition: transform .15s; }
+.tg input:checked + .sw { background: var(--c, var(--pop)); }
+.tg input:checked + .sw::after { transform: translateX(12px); }
+.tg input:focus-visible + .sw { outline: 2px solid var(--pop); outline-offset: 2px; }
+.layers-foot { padding: 8px 14px 12px; color: var(--dim); font-size: 12px; border-top: 1px solid var(--line); }
+
+/* Picker */
+.main { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.picker-title { display: flex; align-items: center; gap: 10px; }
+.picker-title i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.picker-title small { color: var(--dim); font-size: 12.5px; font-weight: 400; }
+.level { display: flex; align-items: center; gap: 8px; }
+.level input { width: 120px; }
+.level output { font: 12px var(--font-mono); color: var(--dim); width: 3.5em; font-variant-numeric: tabular-nums; }
+.preview { margin: 12px 14px 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); padding: 8px 12px 10px; height: 136px; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 4px; font: 12.5px/1.55 var(--font-mono); }
+.preview .pv-label { font: 600 10.5px var(--font-ui); text-transform: uppercase; letter-spacing: .08em; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview { overflow: hidden; }
+.preview > .pv-body { display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; min-height: 0; overflow-wrap: anywhere; }
+.pv-text { white-space: pre-wrap; }
+.preview.pv-think .pv-text { color: var(--dim); font-style: italic; }
+.preview.pv-typing .pv-text { color: var(--tool); }
+.pv-line { color: var(--dim); }
+.pv-line b { color: var(--fg); font-weight: 600; }
+.pv-line .ok { color: var(--ok); }
+.pv-user { align-self: flex-end; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; max-width: 90%; font-family: var(--font-ui); }
+.caret { display: inline-block; width: .5em; height: 1em; vertical-align: -0.15em; background: var(--pop); margin-left: 1px; animation: blink 1s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); gap: 8px; padding: 12px 14px 14px; }
+.tile { position: relative; text-align: left; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 10px; padding: 9px 30px 9px 11px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 0; font: inherit; }
+.tile:hover { border-color: var(--dim); }
+.tile[aria-checked="true"] { border-color: var(--pop); box-shadow: inset 0 0 0 1px var(--pop); background: var(--pop-soft); }
+.tile b { font: 700 14.5px/1.2 var(--font-display); }
+.tile span { color: var(--dim); font-size: 12px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tile.off b { color: var(--dim); }
+.tile.sounding::after { content: ""; position: absolute; left: 11px; right: 30px; bottom: 5px; height: 2px; border-radius: 1px; background: var(--pop); animation: grow var(--dur, 2s) linear forwards; transform-origin: left; }
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.star { position: absolute; top: 6px; right: 6px; border: 0; background: transparent; color: var(--dim); cursor: pointer; font-size: 15px; line-height: 1; padding: 3px; border-radius: 4px; }
+.star[aria-pressed="true"] { color: var(--pick); }
+
+/* Full session */
 .phases { display: flex; flex-wrap: wrap; gap: 5px; padding: 9px 14px; border-bottom: 1px solid var(--line); }
 .ph { font: 600 11px var(--font-mono); color: var(--dim); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; display: inline-flex; align-items: center; gap: 5px; }
 .ph i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
 .ph.on { color: var(--fg); border-color: var(--dim); }
-.ph.on i { background: var(--c, var(--pop)); }
-.ph.hit i { box-shadow: 0 0 0 3px var(--pop-soft); }
-.ph.off { text-decoration: line-through; opacity: .55; }
-.log { font: 12.5px/1.6 var(--font-mono); padding: 10px 14px 14px; height: 250px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 9px; overflow-wrap: anywhere; }
-@media (max-width: 1040px) { .log { height: 240px; } }
+.ph.on i { background: var(--c); }
+.ph.off { text-decoration: line-through; opacity: .5; }
+.log { font: 12.5px/1.6 var(--font-mono); padding: 10px 14px 14px; height: 260px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 9px; overflow-wrap: anywhere; }
 .log .hint { color: var(--dim); }
 .user { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
 .user::before { content: "› "; color: var(--pop); font-weight: 600; }
 .think { color: var(--dim); font-style: italic; white-space: pre-wrap; border-left: 2px solid var(--think); padding-left: 9px; }
 .think.closed { font-style: normal; color: var(--think); border-left-color: transparent; padding-left: 0; }
 .say { white-space: pre-wrap; }
-.say code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 3px; }
-.say strong { font-weight: 600; }
+.say code, .pv-body code { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 0 3px; }
+.say strong, .pv-body strong { font-weight: 600; }
 .tool .call { display: flex; gap: 7px; align-items: baseline; }
 .tool .call i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--tool); }
 .tool.ok .call i { background: var(--ok); }
 .tool .nm { color: var(--tool); font-weight: 600; }
 .tool .raw, .tool .out { color: var(--dim); font-size: 11.5px; white-space: pre-wrap; padding-left: 14px; }
-.caret { display: inline-block; width: .5em; height: 1em; vertical-align: -0.15em; background: var(--pop); margin-left: 1px; animation: blink 1s steps(2, start) infinite; }
-@keyframes blink { to { visibility: hidden; } }
-.prog { height: 3px; background: var(--line); }
+.prog { height: 3px; background: var(--line); border-radius: 0 0 12px 12px; overflow: hidden; }
 .prog i { display: block; height: 100%; width: 0; background: var(--pop); }
-
-/* Mixer */
-.mix { padding: 4px 14px 10px; display: flex; flex-direction: column; }
-.row { display: grid; grid-template-columns: auto minmax(0, 1fr) 132px 74px; gap: 4px 10px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line); }
-.row:first-child { border-top: 0; }
-.row.disabled .lbl, .row.disabled select, .row.disabled input[type=range] { opacity: .45; }
-.tg { position: relative; display: inline-flex; cursor: pointer; }
-.tg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-.sw { width: 28px; height: 16px; border-radius: 8px; background: var(--line); position: relative; transition: background .15s; }
-.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); transition: transform .15s; }
-.tg input:checked + .sw { background: var(--c, var(--pop)); }
-.tg input:checked + .sw::after { transform: translateX(12px); }
-.lbl { min-width: 0; }
-.lbl b { font-weight: 600; font-size: 13px; display: block; }
-.lbl small { color: var(--dim); font-size: 11.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-select { width: 100%; font: 12.5px var(--font-ui); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
-.row input[type=range] { width: 100%; }
-@media (max-width: 460px) { .row { grid-template-columns: auto minmax(0, 1fr) 110px; } .row input[type=range] { grid-column: 2 / -1; } }
-.mix-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
-
-@media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
+.vol { display: flex; align-items: center; gap: 8px; }
+#vol { width: 90px; }
+@media (prefers-reduced-motion: reduce) { .caret { animation: none; } .tile.sounding::after { animation: none; transform: scaleX(1); } }
 </style>
 
 <div class="wrap">
   <header>
-    <h1>tokenpop <span>Sound Lab</span></h1>
-    <p class="intro">Fifteen voices on one real DeepSeek Harness session: the prompt is sent, the model thinks, types seven tool calls, then writes the answer. Watch the session on the right while each voice plays, mix the layers to taste, and pick the voices that should ship first.</p>
+    <div>
+      <h1>tokenpop <span>Sound Lab</span></h1>
+      <p class="intro">Pick a layer, then click voices to hear that layer on its own. Start from a theme to set every layer at once. Star the voices that should ship first.</p>
+    </div>
+    <div class="top-actions">
+      <div class="vol"><label class="label" for="vol">Volume</label><input type="range" id="vol" min="0" max="100" value="55"></div>
+      <button class="btn primary" id="copy" type="button">Copy config</button>
+      <span class="status" id="status" aria-live="polite"></span>
+    </div>
   </header>
 
-  <div class="bar" role="region" aria-label="Your picks">
-    <div class="picks" id="picks"><span class="label">Picks</span><span class="empty">Nothing picked yet</span></div>
-    <button class="btn" id="play-all" type="button">Play all</button>
-    <div class="vol"><label class="label" for="vol">Volume</label><input type="range" id="vol" min="0" max="100" value="55"></div>
-    <button class="btn primary" id="copy" type="button">Copy picks + mix</button>
-    <span class="status" id="status" aria-live="polite"></span>
+  <div class="themes">
+    <span class="label" id="themes-label">Theme</span>
+    <div class="theme-row" id="themes" role="group" aria-labelledby="themes-label"></div>
   </div>
 
   <div class="layout">
-    <main class="grid" id="grid" aria-label="Voices"></main>
+    <section class="panel layers" aria-label="Sound layers">
+      <div class="panel-head"><h2>Layers</h2><button class="btn" id="reset" type="button">Reset</button></div>
+      <ul class="layer-list" id="layer-list"></ul>
+      <div class="layers-foot">Select a layer to choose its voice. The switch turns a layer off.</div>
+    </section>
 
-    <aside class="side">
-      <section class="panel" aria-label="Session view">
-        <div class="panel-head"><h2>Session</h2><span class="now" id="now">Press play on any voice</span></div>
+    <div class="main">
+      <section class="panel" aria-label="Voice picker" id="picker">
+        <div class="panel-head">
+          <div class="picker-title" id="picker-title"></div>
+          <div class="level">
+            <label class="label" for="level">Level</label>
+            <input type="range" id="level" min="0" max="150" step="5">
+            <output id="level-out" for="level"></output>
+            <button class="btn" id="solo" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>Play layer</button>
+          </div>
+        </div>
+        <div class="preview" id="preview" aria-hidden="true"><span class="pv-label" id="pv-label">Solo preview</span><div class="pv-body" id="pv-body"></div></div>
+        <div class="tiles" id="tiles" role="radiogroup"></div>
+      </section>
+
+      <section class="panel" aria-label="Full session">
+        <div class="panel-head">
+          <h2>All layers together</h2>
+          <button class="btn primary" id="full" type="button"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg><span>Play full session</span></button>
+        </div>
         <div class="phases" id="phases"></div>
         <div class="log" id="log"></div>
         <div class="prog"><i id="prog"></i></div>
       </section>
-
-      <section class="panel" aria-label="Sound layers">
-        <div class="panel-head"><h2>Layers</h2><button class="btn" id="reset-mix" type="button">Reset</button></div>
-        <div class="mix" id="mix"></div>
-      </section>
-    </aside>
+    </div>
   </div>
 </div>
 
 <script>
-const SESSION = {"prompt":"The test in test_calc.py is failing. Run it, find the bug, fix it, and rerun to confirm. Then summarize the fix in two sentences.","events":[[0,"prompt"],[600,"text","I"],[616,"text","'ll"],[616,"text"," start"],[616,"text"," by"],[616,"text"," looking"],[630,"text"," at"],[630,"text"," the"],[630,"text"," files"],[630,"text"," in"],[630,"text"," the"],[646,"text"," workspace"],[647,"text","."],[679,"tool_args","","bash"],[679,"tool_args","{\""],[695,"tool_args","command"],[695,"tool_args","\""],[695,"tool_args",": \""],[710,"tool_args","ls"],[710,"tool_args"," -"],[710,"tool_args","la"],[710,"tool_args","\""],[726,"tool_args",", \""],[741,"tool_args","description"],[741,"tool_args","\""],[741,"tool_args",": \""],[757,"tool_args","List"],[757,"tool_args"," files"],[757,"tool_args"," in"],[757,"tool_args"," workspace"],[776,"tool_args","\""],[776,"tool_args","}"],[802,"tool_args","","glob"],[818,"tool_args","{\""],[818,"tool_args","pattern"],[818,"tool_args","\""],[835,"tool_args",": \""],[835,"tool_args","**"],[835,"tool_args","/*"],[835,"tool_args","."],[836,"tool_args","py"],[849,"tool_args","\""],[849,"tool_args","}"],[889,"tool_start","bash","ls -la"],[925,"tool_end","bash","total 16\ndrwxr-xr-x 2 dev root 4096 Nov 20 07:49 .\ndrwxr-xr-x 8 dev root 4096 Nov 20 07:50 ..\n-rw-r--r-- 1 dev root   65 Nov 20 07:49 calc.py\n-rw-r--r-- 1 dev root   82 Nov 20 07:49 test_calc.py",0],[926,"tool_start","glob","**/*.py"],[1082,"tool_end","glob","calc.py\ntest_calc.py",0],[1682,"tool_args","","read"],[1693,"tool_args","{\""],[1694,"tool_args","file"],[1694,"tool_args","_path"],[1706,"tool_args","\""],[1706,"tool_args",": \""],[1706,"tool_args","calc"],[1718,"tool_args",".py"],[1718,"tool_args","\""],[1731,"tool_args","}"],[1752,"tool_args","","read"],[1763,"tool_args","{\""],[1763,"tool_args","file"],[1763,"tool_args","_path"],[1763,"tool_args","\""],[1777,"tool_args",": \""],[1777,"tool_args","test"],[1777,"tool_args","_c"],[1791,"tool_args","alc"],[1792,"tool_args",".py"],[1792,"tool_args","\""],[1831,"tool_args","}"],[1834,"tool_start","read","calc.py"],[1835,"tool_start","read","test_calc.py"],[1844,"tool_end","read","<path>~/demo/calc.py<\/path>\n<type>file<\/type>\n<content>\n1: def add(a, b):\n2:     return a - b\n3: \n4: def mul(a, b):\n… 4 more lines",0],[1846,"tool_end","read","<path>~/demo/test_calc.py<\/path>\n<type>file<\/type>\n<content>\n1: from calc import add, mul\n2: assert add(2, 3) == 5\n3: assert mul(2, 3) == 6\n4: print(\"ok\")\n… 3 more lines",0],[2446,"tool_args","","bash"],[2447,"tool_args","{\""],[2447,"tool_args","command"],[2447,"tool_args","\""],[2447,"tool_args",": \""],[2447,"tool_args","python"],[2447,"tool_args"," test"],[2447,"tool_args","_c"],[2447,"tool_args","alc"],[2447,"tool_args",".py"],[2447,"tool_args",";"],[2447,"tool_args"," echo"],[2447,"tool_args"," \\\""],[2504,"tool_args","exit"],[2504,"tool_args",":"],[2504,"tool_args"," $"],[2504,"tool_args","?\\\""],[2504,"tool_args","\""],[2516,"tool_args",", \""],[2516,"tool_args","description"],[2517,"tool_args","\""],[2517,"tool_args",": \""],[2554,"tool_args","Run"],[2554,"tool_args"," the"],[2554,"tool_args"," failing"],[2554,"tool_args"," test"],[2554,"tool_args","\""],[2555,"tool_args","}"],[2602,"tool_start","bash","python test_calc.py; echo \"exit: $?\""],[2685,"tool_end","bash","exit: 1\n[stderr]\nTraceback (most recent call last):\n  File \"~/demo/test_calc.py\", line 2, in <module>\n    assert add(2, 3) == 5\n           ^^^^^^^^^^^^^^\nAssertionError",0],[3285,"reasoning","Bug"],[3523,"reasoning",":"],[3543,"reasoning"," add"],[3543,"reasoning"," returns"],[3555,"reasoning"," a"],[3556,"reasoning"," -"],[3556,"reasoning"," b"],[3556,"reasoning","."],[3556,"reasoning"," Fix"],[3568,"reasoning","."],[3586,"text","Confirmed"],[3586,"text"," the"],[3599,"text"," failure"],[3599,"text",":"],[3599,"text"," `"],[3599,"text","add"],[3599,"text","("],[3612,"text","2"],[3613,"text",","],[3613,"text"," "],[3613,"text","3"],[3613,"text",")`"],[3613,"text"," returns"],[3629,"text"," `"],[3629,"text","-"],[3629,"text","1"],[3642,"text","`"],[3642,"text"," because"],[3658,"text"," `"],[3658,"text","add"],[3658,"text","`"],[3673,"text"," subtract"],[3673,"text","s"],[3686,"text","."],[3686,"text"," Fix"],[3686,"text","ing"],[3703,"text",":"],[3719,"tool_args","","edit"],[3730,"tool_args","{\""],[3730,"tool_args","file"],[3730,"tool_args","_path"],[3753,"tool_args","\""],[3753,"tool_args",": \""],[3753,"tool_args","calc"],[3763,"tool_args",".py"],[3763,"tool_args","\""],[3775,"tool_args",", \""],[3775,"tool_args","old"],[3775,"tool_args","_string"],[3791,"tool_args","\""],[3791,"tool_args",": \""],[3791,"tool_args","   "],[3805,"tool_args"," return"],[3805,"tool_args"," a"],[3805,"tool_args"," -"],[3805,"tool_args"," b"],[3805,"tool_args","\""],[3837,"tool_args",", \""],[3837,"tool_args","new"],[3837,"tool_args","_string"],[3837,"tool_args","\""],[3854,"tool_args",": \""],[3854,"tool_args","   "],[3854,"tool_args"," return"],[3854,"tool_args"," a"],[3854,"tool_args"," +"],[3869,"tool_args"," b"],[3869,"tool_args","\""],[3885,"tool_args","}"],[3915,"tool_start","edit","calc.py"],[3927,"tool_end","edit","The file ~/demo/calc.py has been updated successfully.",0],[4527,"tool_args","","bash"],[4543,"tool_args","{\""],[4543,"tool_args","command"],[4543,"tool_args","\""],[4558,"tool_args",": \""],[4558,"tool_args","python"],[4558,"tool_args"," test"],[4573,"tool_args","_c"],[4573,"tool_args","alc"],[4573,"tool_args",".py"],[4573,"tool_args",";"],[4573,"tool_args"," echo"],[4573,"tool_args"," \\\""],[4589,"tool_args","exit"],[4590,"tool_args",":"],[4590,"tool_args"," $"],[4590,"tool_args","?\\\""],[4590,"tool_args","\""],[4620,"tool_args",", \""],[4620,"tool_args","description"],[4620,"tool_args","\""],[4633,"tool_args",": \""],[4633,"tool_args","R"],[4633,"tool_args","er"],[4633,"tool_args","un"],[4633,"tool_args"," the"],[4633,"tool_args"," test"],[4649,"tool_args"," after"],[4649,"tool_args"," fix"],[4649,"tool_args","\""],[4672,"tool_args","}"],[4701,"tool_start","bash","python test_calc.py; echo \"exit: $?\""],[4727,"tool_end","bash","ok\nexit: 0",0],[5327,"text","Test"],[5339,"text"," passes"],[5339,"text"," now"],[5357,"text"," ("],[5357,"text","exit"],[5357,"text"," "],[5370,"text","0"],[5370,"text",","],[5371,"text"," prints"],[5371,"text"," `"],[5389,"text","ok"],[5389,"text","`"],[5389,"text",").\n\n"],[5389,"text","**"],[5389,"text","Summary"],[5389,"text",":**"],[5410,"text"," The"],[5410,"text"," bug"],[5410,"text"," was"],[5410,"text"," in"],[5421,"text"," `"],[5421,"text","calc"],[5421,"text",".py"],[5434,"text","`"],[5451,"text","'"],[5451,"text","s"],[5451,"text"," `"],[5451,"text","add"],[5451,"text","`"],[5463,"text"," function"],[5463,"text",","],[5463,"text"," which"],[5463,"text"," returned"],[5477,"text"," `"],[5477,"text","a"],[5477,"text"," -"],[5477,"text"," b"],[5477,"text","`"],[5503,"text"," instead"],[5503,"text"," of"],[5503,"text"," `"],[5503,"text","a"],[5503,"text"," +"],[5503,"text"," b"],[5513,"text","`,"],[5514,"text"," so"],[5514,"text"," `"],[5514,"text","add"],[5528,"text","("],[5529,"text","2"],[5529,"text",","],[5529,"text"," "],[5529,"text","3"],[5529,"text",")`"],[5542,"text"," yielded"],[5542,"text"," `"],[5542,"text","-"],[5542,"text","1"],[5568,"text","`"],[5568,"text"," and"],[5577,"text"," tri"],[5590,"text","pped"],[5590,"text"," the"],[5590,"text"," assertion"],[5590,"text","."],[5590,"text"," I"],[5610,"text"," changed"],[5610,"text"," the"],[5624,"text"," operator"],[5637,"text"," to"],[5637,"text"," `"],[5637,"text","+"],[5656,"text","`,"],[5656,"text"," and"],[5656,"text"," `"],[5667,"text","test"],[5685,"text","_c"],[5685,"text","alc"],[5685,"text",".py"],[5685,"text","`"],[5685,"text"," now"],[5686,"text"," passes"],[5697,"text"," completely"],[5697,"text","."],[5700,"done"]]};
+const DATA = {"session":{"prompt":"The test in test_calc.py is failing. Run it, find the bug, fix it, and rerun to confirm. Then summarize the fix in two sentences.","events":[[0,"prompt"],[600,"text","I"],[616,"text","'ll"],[616,"text"," start"],[616,"text"," by"],[616,"text"," looking"],[630,"text"," at"],[630,"text"," the"],[630,"text"," files"],[630,"text"," in"],[630,"text"," the"],[646,"text"," workspace"],[647,"text","."],[679,"tool_args","","bash"],[679,"tool_args","{\""],[695,"tool_args","command"],[695,"tool_args","\""],[695,"tool_args",": \""],[710,"tool_args","ls"],[710,"tool_args"," -"],[710,"tool_args","la"],[710,"tool_args","\""],[726,"tool_args",", \""],[741,"tool_args","description"],[741,"tool_args","\""],[741,"tool_args",": \""],[757,"tool_args","List"],[757,"tool_args"," files"],[757,"tool_args"," in"],[757,"tool_args"," workspace"],[776,"tool_args","\""],[776,"tool_args","}"],[802,"tool_args","","glob"],[818,"tool_args","{\""],[818,"tool_args","pattern"],[818,"tool_args","\""],[835,"tool_args",": \""],[835,"tool_args","**"],[835,"tool_args","/*"],[835,"tool_args","."],[836,"tool_args","py"],[849,"tool_args","\""],[849,"tool_args","}"],[889,"tool_start","bash","ls -la"],[925,"tool_end","bash","total 16\ndrwxr-xr-x 2 dev root 4096 Nov 20 07:49 .\ndrwxr-xr-x 8 dev root 4096 Nov 20 07:50 ..\n-rw-r--r-- 1 dev root   65 Nov 20 07:49 calc.py\n-rw-r--r-- 1 dev root   82 Nov 20 07:49 test_calc.py",0],[926,"tool_start","glob","**/*.py"],[1082,"tool_end","glob","calc.py\ntest_calc.py",0],[1682,"tool_args","","read"],[1693,"tool_args","{\""],[1694,"tool_args","file"],[1694,"tool_args","_path"],[1706,"tool_args","\""],[1706,"tool_args",": \""],[1706,"tool_args","calc"],[1718,"tool_args",".py"],[1718,"tool_args","\""],[1731,"tool_args","}"],[1752,"tool_args","","read"],[1763,"tool_args","{\""],[1763,"tool_args","file"],[1763,"tool_args","_path"],[1763,"tool_args","\""],[1777,"tool_args",": \""],[1777,"tool_args","test"],[1777,"tool_args","_c"],[1791,"tool_args","alc"],[1792,"tool_args",".py"],[1792,"tool_args","\""],[1831,"tool_args","}"],[1834,"tool_start","read","calc.py"],[1835,"tool_start","read","test_calc.py"],[1844,"tool_end","read","<path>~/demo/calc.py<\/path>\n<type>file<\/type>\n<content>\n1: def add(a, b):\n2:     return a - b\n3: \n4: def mul(a, b):\n… 4 more lines",0],[1846,"tool_end","read","<path>~/demo/test_calc.py<\/path>\n<type>file<\/type>\n<content>\n1: from calc import add, mul\n2: assert add(2, 3) == 5\n3: assert mul(2, 3) == 6\n4: print(\"ok\")\n… 3 more lines",0],[2446,"tool_args","","bash"],[2447,"tool_args","{\""],[2447,"tool_args","command"],[2447,"tool_args","\""],[2447,"tool_args",": \""],[2447,"tool_args","python"],[2447,"tool_args"," test"],[2447,"tool_args","_c"],[2447,"tool_args","alc"],[2447,"tool_args",".py"],[2447,"tool_args",";"],[2447,"tool_args"," echo"],[2447,"tool_args"," \\\""],[2504,"tool_args","exit"],[2504,"tool_args",":"],[2504,"tool_args"," $"],[2504,"tool_args","?\\\""],[2504,"tool_args","\""],[2516,"tool_args",", \""],[2516,"tool_args","description"],[2517,"tool_args","\""],[2517,"tool_args",": \""],[2554,"tool_args","Run"],[2554,"tool_args"," the"],[2554,"tool_args"," failing"],[2554,"tool_args"," test"],[2554,"tool_args","\""],[2555,"tool_args","}"],[2602,"tool_start","bash","python test_calc.py; echo \"exit: $?\""],[2685,"tool_end","bash","exit: 1\n[stderr]\nTraceback (most recent call last):\n  File \"~/demo/test_calc.py\", line 2, in <module>\n    assert add(2, 3) == 5\n           ^^^^^^^^^^^^^^\nAssertionError",0],[3285,"reasoning","Bug"],[3523,"reasoning",":"],[3543,"reasoning"," add"],[3543,"reasoning"," returns"],[3555,"reasoning"," a"],[3556,"reasoning"," -"],[3556,"reasoning"," b"],[3556,"reasoning","."],[3556,"reasoning"," Fix"],[3568,"reasoning","."],[3586,"text","Confirmed"],[3586,"text"," the"],[3599,"text"," failure"],[3599,"text",":"],[3599,"text"," `"],[3599,"text","add"],[3599,"text","("],[3612,"text","2"],[3613,"text",","],[3613,"text"," "],[3613,"text","3"],[3613,"text",")`"],[3613,"text"," returns"],[3629,"text"," `"],[3629,"text","-"],[3629,"text","1"],[3642,"text","`"],[3642,"text"," because"],[3658,"text"," `"],[3658,"text","add"],[3658,"text","`"],[3673,"text"," subtract"],[3673,"text","s"],[3686,"text","."],[3686,"text"," Fix"],[3686,"text","ing"],[3703,"text",":"],[3719,"tool_args","","edit"],[3730,"tool_args","{\""],[3730,"tool_args","file"],[3730,"tool_args","_path"],[3753,"tool_args","\""],[3753,"tool_args",": \""],[3753,"tool_args","calc"],[3763,"tool_args",".py"],[3763,"tool_args","\""],[3775,"tool_args",", \""],[3775,"tool_args","old"],[3775,"tool_args","_string"],[3791,"tool_args","\""],[3791,"tool_args",": \""],[3791,"tool_args","   "],[3805,"tool_args"," return"],[3805,"tool_args"," a"],[3805,"tool_args"," -"],[3805,"tool_args"," b"],[3805,"tool_args","\""],[3837,"tool_args",", \""],[3837,"tool_args","new"],[3837,"tool_args","_string"],[3837,"tool_args","\""],[3854,"tool_args",": \""],[3854,"tool_args","   "],[3854,"tool_args"," return"],[3854,"tool_args"," a"],[3854,"tool_args"," +"],[3869,"tool_args"," b"],[3869,"tool_args","\""],[3885,"tool_args","}"],[3915,"tool_start","edit","calc.py"],[3927,"tool_end","edit","The file ~/demo/calc.py has been updated successfully.",0],[4527,"tool_args","","bash"],[4543,"tool_args","{\""],[4543,"tool_args","command"],[4543,"tool_args","\""],[4558,"tool_args",": \""],[4558,"tool_args","python"],[4558,"tool_args"," test"],[4573,"tool_args","_c"],[4573,"tool_args","alc"],[4573,"tool_args",".py"],[4573,"tool_args",";"],[4573,"tool_args"," echo"],[4573,"tool_args"," \\\""],[4589,"tool_args","exit"],[4590,"tool_args",":"],[4590,"tool_args"," $"],[4590,"tool_args","?\\\""],[4590,"tool_args","\""],[4620,"tool_args",", \""],[4620,"tool_args","description"],[4620,"tool_args","\""],[4633,"tool_args",": \""],[4633,"tool_args","R"],[4633,"tool_args","er"],[4633,"tool_args","un"],[4633,"tool_args"," the"],[4633,"tool_args"," test"],[4649,"tool_args"," after"],[4649,"tool_args"," fix"],[4649,"tool_args","\""],[4672,"tool_args","}"],[4701,"tool_start","bash","python test_calc.py; echo \"exit: $?\""],[4727,"tool_end","bash","ok\nexit: 0",0],[5327,"text","Test"],[5339,"text"," passes"],[5339,"text"," now"],[5357,"text"," ("],[5357,"text","exit"],[5357,"text"," "],[5370,"text","0"],[5370,"text",","],[5371,"text"," prints"],[5371,"text"," `"],[5389,"text","ok"],[5389,"text","`"],[5389,"text",").\n\n"],[5389,"text","**"],[5389,"text","Summary"],[5389,"text",":**"],[5410,"text"," The"],[5410,"text"," bug"],[5410,"text"," was"],[5410,"text"," in"],[5421,"text"," `"],[5421,"text","calc"],[5421,"text",".py"],[5434,"text","`"],[5451,"text","'"],[5451,"text","s"],[5451,"text"," `"],[5451,"text","add"],[5451,"text","`"],[5463,"text"," function"],[5463,"text",","],[5463,"text"," which"],[5463,"text"," returned"],[5477,"text"," `"],[5477,"text","a"],[5477,"text"," -"],[5477,"text"," b"],[5477,"text","`"],[5503,"text"," instead"],[5503,"text"," of"],[5503,"text"," `"],[5503,"text","a"],[5503,"text"," +"],[5503,"text"," b"],[5513,"text","`,"],[5514,"text"," so"],[5514,"text"," `"],[5514,"text","add"],[5528,"text","("],[5529,"text","2"],[5529,"text",","],[5529,"text"," "],[5529,"text","3"],[5529,"text",")`"],[5542,"text"," yielded"],[5542,"text"," `"],[5542,"text","-"],[5542,"text","1"],[5568,"text","`"],[5568,"text"," and"],[5577,"text"," tri"],[5590,"text","pped"],[5590,"text"," the"],[5590,"text"," assertion"],[5590,"text","."],[5590,"text"," I"],[5610,"text"," changed"],[5610,"text"," the"],[5624,"text"," operator"],[5637,"text"," to"],[5637,"text"," `"],[5637,"text","+"],[5656,"text","`,"],[5656,"text"," and"],[5656,"text"," `"],[5667,"text","test"],[5685,"text","_c"],[5685,"text","alc"],[5685,"text",".py"],[5685,"text","`"],[5685,"text"," now"],[5686,"text"," passes"],[5697,"text"," completely"],[5697,"text","."],[5700,"done"]]},"solo":{"think":[[0,"reasoning","The"],[150,"reasoning"," file"],[165,"reasoning"," is"],[165,"reasoning"," simple"],[184,"reasoning","."],[184,"reasoning"," The"],[184,"reasoning"," user"],[184,"reasoning"," asks"],[200,"reasoning",":"],[200,"reasoning"," explain"],[200,"reasoning"," in"],[212,"reasoning"," about"],[212,"reasoning"," "],[212,"reasoning","120"],[212,"reasoning"," words"],[212,"reasoning"," what"],[232,"reasoning"," it"],[232,"reasoning"," does"],[232,"reasoning",","],[232,"reasoning"," then"],[232,"reasoning"," list"],[232,"reasoning"," two"],[244,"reasoning"," edge"],[244,"reasoning"," cases"],[244,"reasoning"," it"],[244,"reasoning"," doesn"],[244,"reasoning","'t"],[244,"reasoning"," handle"],[261,"reasoning",".\n\n"],[261,"reasoning","This"],[261,"reasoning"," is"],[262,"reasoning"," a"],[287,"reasoning"," read"],[295,"reasoning","-and"],[313,"reasoning","-ex"],[314,"reasoning","plain"],[314,"reasoning"," task"],[314,"reasoning","."],[314,"reasoning"," No"],[314,"reasoning"," need"],[320,"reasoning"," for"],[320,"reasoning"," sub"],[338,"reasoning","agents"],[339,"reasoning","."],[339,"reasoning"," Let"],[354,"reasoning"," me"],[355,"reasoning"," write"],[355,"reasoning"," ~"],[376,"reasoning","120"],[376,"reasoning"," words"],[377,"reasoning"," and"],[387,"reasoning"," two"],[387,"reasoning"," edge"],[387,"reasoning"," cases"],[405,"reasoning",".\n\n"],[405,"reasoning","Note"],[405,"reasoning",":"],[405,"reasoning"," it"],[421,"reasoning","'s"],[421,"reasoning"," a"],[422,"reasoning"," JSON"],[433,"reasoning"," cart"],[444,"reasoning"," loader"],[444,"reasoning","."],[458,"reasoning"," Edge"],[473,"reasoning"," cases"],[473,"reasoning",":"],[473,"reasoning"," missing"],[488,"reasoning","/m"],[504,"reasoning","al"],[504,"reasoning","formed"],[504,"reasoning"," file"],[520,"reasoning"," or"],[535,"reasoning"," argv"],[535,"reasoning",","],[550,"reasoning"," non"],[550,"reasoning","-n"],[565,"reasoning","umeric"],[565,"reasoning"," price"],[581,"reasoning","/q"],[581,"reasoning","ty"],[581,"reasoning",","],[581,"reasoning"," negative"],[581,"reasoning"," q"],[599,"reasoning","ty"],[599,"reasoning",","],[599,"reasoning"," zero"],[599,"reasoning"," q"],[616,"reasoning","ty"],[617,"reasoning",","],[617,"reasoning"," missing"],[617,"reasoning"," keys"],[634,"reasoning",","],[634,"reasoning"," non"],[634,"reasoning","-list"],[643,"reasoning"," JSON"],[695,"reasoning",","],[695,"reasoning"," rounding"],[695,"reasoning"," floats"],[695,"reasoning"," ("],[695,"reasoning","money"],[705,"reasoning"," precision"],[720,"reasoning","),"],[721,"reasoning"," quantity"],[739,"reasoning"," as"],[739,"reasoning"," float"],[755,"reasoning",","],[756,"reasoning"," empty"],[756,"reasoning"," list"],[769,"reasoning"," returns"],[769,"reasoning"," "],[784,"reasoning","0"],[784,"reasoning","."],[801,"reasoning"," Two"],[815,"reasoning"," edge"],[815,"reasoning"," cases"],[815,"reasoning",":"],[815,"reasoning"," no"],[829,"reasoning"," argv"],[947,"reasoning","/file"],[947,"reasoning"," missing"],[948,"reasoning"," →"],[948,"reasoning"," Index"],[948,"reasoning","Error"],[949,"reasoning",","],[949,"reasoning"," and"],[949,"reasoning"," mal"],[949,"reasoning","formed"],[949,"reasoning"," JSON"],[950,"reasoning"," /"],[950,"reasoning"," missing"],[950,"reasoning"," keys"],[951,"reasoning","."],[951,"reasoning"," Or"],[954,"reasoning"," currency"],[969,"reasoning"," rounding"],[985,"reasoning",".\n\n"],[985,"reasoning","Let"],[985,"reasoning"," me"],[985,"reasoning"," aim"],[1000,"reasoning"," ~"],[1000,"reasoning","120"],[1000,"reasoning"," words"],[1000,"reasoning",".\n\n"],[1000,"reasoning","Answer"],[1000,"reasoning",":"],[1019,"reasoning"," explanation"],[1019,"reasoning"," plus"],[1032,"reasoning"," list"],[1032,"reasoning"," of"],[1045,"reasoning"," two"],[1046,"reasoning"," edge"],[1046,"reasoning"," cases"],[1046,"reasoning","."],[1063,"reasoning"," Should"],[1063,"reasoning"," I"],[1063,"reasoning"," mention"],[1082,"reasoning"," the"],[1082,"reasoning"," file"],[1097,"reasoning"," structure"],[1097,"reasoning","?"],[1107,"reasoning"," Keep"],[1108,"reasoning"," concise"],[1141,"reasoning",".\n\n"],[1141,"reasoning","Word"],[1144,"reasoning"," count"],[1145,"reasoning"," check"],[1155,"reasoning","."],[1155,"reasoning"," Let"],[1155,"reasoning"," me"],[1155,"reasoning"," draft"],[1187,"reasoning",":\n\n"],[1187,"reasoning","\""],[1187,"reasoning","cart"],[1187,"reasoning",".py"],[1187,"reasoning"," is"],[1188,"reasoning"," a"],[1188,"reasoning"," small"],[1188,"reasoning"," command"],[1211,"reasoning","-line"],[1211,"reasoning"," utility"],[1216,"reasoning"," for"],[1233,"reasoning"," totaling"],[1252,"reasoning"," a"],[1252,"reasoning"," shopping"],[1280,"reasoning"," cart"],[1280,"reasoning"," stored"],[1287,"reasoning"," as"],[1297,"reasoning"," JSON"],[1297,"reasoning","."],[1297,"reasoning"," Running"],[1311,"reasoning"," it"],[1312,"reasoning"," with"],[1328,"reasoning"," a"],[1328,"reasoning"," file"],[1350,"reasoning"," path"],[1350,"reasoning"," loads"],[1360,"reasoning"," that"],[1376,"reasoning"," file"],[1392,"reasoning"," via"],[1392,"reasoning"," json"],[1392,"reasoning",".load"],[1408,"reasoning"," and"],[1408,"reasoning"," passes"],[1426,"reasoning"," the"],[1426,"reasoning"," resulting"],[1442,"reasoning"," list"],[1442,"reasoning"," of"],[1442,"reasoning"," item"],[1463,"reasoning"," dictionaries"],[1463,"reasoning"," to"],[1463,"reasoning"," total"],[1478,"reasoning","()."],[1491,"reasoning"," That"],[1510,"reasoning"," function"],[1510,"reasoning"," multipl"],[1510,"reasoning","ies"],[1510,"reasoning"," each"],[1523,"reasoning"," item"],[1523,"reasoning","'s"],[1523,"reasoning"," price"],[1523,"reasoning"," by"],[1539,"reasoning"," its"],[1540,"reasoning"," q"],[1540,"reasoning","ty"],[1540,"reasoning"," and"],[1555,"reasoning"," sums"],[1555,"reasoning"," the"],[1571,"reasoning"," products"],[1571,"reasoning"," with"],[1572,"reasoning"," Python"],[1587,"reasoning","'s"],[1588,"reasoning"," built"],[1611,"reasoning","-in"],[1611,"reasoning"," sum"],[1611,"reasoning",","],[1611,"reasoning"," then"],[1624,"reasoning"," main"],[1635,"reasoning"," prints"],[1635,"reasoning"," the"],[1635,"reasoning"," result"],[1649,"reasoning","."],[1649,"reasoning"," It"],[1664,"reasoning"," assumes"],[1680,"reasoning"," the"],[1702,"reasoning"," file"],[1702,"reasoning"," is"],[1711,"reasoning"," JSON"],[1711,"reasoning"," whose"],[1726,"reasoning"," top"],[1726,"reasoning","-level"],[1743,"reasoning"," value"],[1743,"reasoning"," is"],[1743,"reasoning"," a"],[1743,"reasoning"," list"],[1758,"reasoning"," of"],[1758,"reasoning"," objects"],[1773,"reasoning"," with"],[1787,"reasoning"," numeric"],[1806,"reasoning"," price"],[1822,"reasoning"," and"],[1822,"reasoning"," q"],[1822,"reasoning","ty"],[1822,"reasoning"," keys"],[1822,"reasoning",","],[1822,"reasoning"," and"],[1839,"reasoning"," that"],[1849,"reasoning"," argv"],[1868,"reasoning","["],[1868,"reasoning","1"],[1868,"reasoning","]"],[1868,"reasoning"," names"],[1881,"reasoning"," a"],[1881,"reasoning"," readable"],[1903,"reasoning"," file"],[1903,"reasoning","."],[1903,"reasoning"," There"],[1916,"reasoning"," is"],[1916,"reasoning"," no"],[1916,"reasoning"," validation"],[1928,"reasoning",","],[1928,"reasoning"," formatting"],[1942,"reasoning",","],[1942,"reasoning"," or"],[1942,"reasoning"," rounding"],[1956,"reasoning"," —"],[1973,"reasoning"," it"],[1973,"reasoning"," just"],[1989,"reasoning"," produces"],[2004,"reasoning"," one"],[2004,"reasoning"," number"],[2019,"reasoning"," per"],[2036,"reasoning"," invocation"],[2050,"reasoning",","],[2065,"reasoning"," serving"],[2080,"reasoning"," as"],[2080,"reasoning"," a"],[2080,"reasoning"," minimal"],[2095,"reasoning"," example"],[2112,"reasoning"," of"],[2112,"reasoning"," separating"],[2127,"reasoning"," data"],[2127,"reasoning"," loading"],[2144,"reasoning"," from"],[2144,"reasoning"," a"],[2162,"reasoning"," pure"],[2182,"reasoning"," calculation"],[2182,"reasoning"," function"],[2197,"reasoning",".\"\n\n"],[2198,"reasoning","That"],[2198,"reasoning","'s"],[2198,"reasoning"," about"],[2211,"reasoning"," "],[2211,"reasoning","110"],[2211,"reasoning","."],[2222,"reasoning"," Good"],[2223,"reasoning",".\n\n"],[2223,"reasoning","Edge"],[2262,"reasoning"," cases"],[2262,"reasoning",":\n"],[2262,"reasoning","1"],[2263,"reasoning","."],[2263,"reasoning"," Missing"],[2263,"reasoning","/"],[2263,"reasoning","extra"],[2265,"reasoning"," CLI"],[2283,"reasoning"," args"],[2299,"reasoning"," or"],[2300,"reasoning"," un"],[2325,"reasoning","read"],[2325,"reasoning","able"],[2325,"reasoning"," path"],[2328,"reasoning"," —"],[2329,"reasoning"," sys"],[2345,"reasoning",".argv"],[2345,"reasoning","["],[2345,"reasoning","1"],[2345,"reasoning","]"],[2345,"reasoning"," raises"],[2365,"reasoning"," Index"],[2365,"reasoning","Error"],[2365,"reasoning",","],[2365,"reasoning"," open"],[2378,"reasoning"," raises"],[2395,"reasoning"," File"],[2395,"reasoning","NotFound"],[2395,"reasoning","Error"],[2395,"reasoning",","],[2395,"reasoning"," JSON"],[2409,"reasoning"," decode"],[2409,"reasoning"," error"],[2428,"reasoning"," un"],[2442,"reasoning","ca"],[2442,"reasoning","ught"],[2442,"reasoning",".\n"],[2443,"reasoning","2"],[2443,"reasoning","."],[2443,"reasoning"," Bad"],[2455,"reasoning"," data"],[2479,"reasoning",":"],[2479,"reasoning"," missing"],[2479,"reasoning"," price"],[2487,"reasoning","/q"],[2487,"reasoning","ty"],[2487,"reasoning"," keys"],[2487,"reasoning"," ("],[2505,"reasoning","Key"],[2505,"reasoning","Error"],[2505,"reasoning","),"],[2505,"reasoning"," non"],[2505,"reasoning","-n"],[2517,"reasoning","umeric"],[2517,"reasoning"," or"],[2533,"reasoning"," string"],[2533,"reasoning"," values"],[2533,"reasoning"," ("],[2555,"reasoning","Type"],[2555,"reasoning","Error"],[2555,"reasoning","),"],[2555,"reasoning"," negative"],[2563,"reasoning","/"],[2582,"reasoning","zero"],[2582,"reasoning"," q"],[2582,"reasoning","ty"],[2582,"reasoning"," silently"],[2595,"reasoning"," accepted"],[2595,"reasoning",";"]],"write":[[0,"text","Read"],[13,"text"," it"],[30,"text","."],[30,"text"," Here"],[30,"text","'s"],[46,"text"," the"],[46,"text"," explanation"],[46,"text"," and"],[61,"text"," the"],[61,"text"," gaps"],[84,"text",".\n\n"],[84,"text","**"],[84,"text","What"],[92,"text"," it"],[93,"text"," does"],[93,"text","**\n\n"],[93,"text","`"],[107,"text","cart"],[107,"text",".py"],[107,"text","`"],[107,"text"," is"],[107,"text"," a"],[107,"text"," small"],[122,"text"," command"],[122,"text","-line"],[122,"text"," utility"],[122,"text"," for"],[138,"text"," totaling"],[138,"text"," a"],[138,"text"," shopping"],[138,"text"," cart"],[155,"text"," stored"],[155,"text"," as"],[155,"text"," JSON"],[155,"text","."],[155,"text"," Run"],[168,"text"," with"],[185,"text"," a"],[185,"text"," file"],[185,"text"," path"],[185,"text",","],[185,"text"," it"],[185,"text"," calls"],[198,"text"," `"],[198,"text","load"],[198,"text","()"],[219,"text","`,"],[219,"text"," which"],[219,"text"," opens"],[234,"text"," the"],[234,"text"," file"],[234,"text"," and"],[234,"text"," par"],[250,"text","ses"],[250,"text"," it"],[250,"text"," with"],[251,"text"," `"],[251,"text","json"],[251,"text",".load"],[265,"text","`,"],[290,"text"," then"],[291,"text"," passes"],[291,"text"," the"],[307,"text"," resulting"],[307,"text"," list"],[307,"text"," of"],[308,"text"," item"],[322,"text"," dictionaries"],[322,"text"," to"],[322,"text"," `"],[322,"text","total"],[322,"text","()"],[343,"text","`."],[343,"text"," That"],[343,"text"," function"],[343,"text"," multipl"],[354,"text","ies"],[355,"text"," each"],[355,"text"," item"],[355,"text","'s"],[355,"text"," `"],[355,"text","price"],[365,"text","`"],[365,"text"," by"],[365,"text"," its"],[365,"text"," `"],[365,"text","q"],[365,"text","ty"],[388,"text","`"],[388,"text"," and"],[388,"text"," sums"],[388,"text"," the"],[399,"text"," products"],[399,"text"," using"],[412,"text"," Python"],[412,"text","'s"],[412,"text"," built"],[429,"text","-in"],[429,"text"," `"],[429,"text","sum"],[429,"text","()`"],[443,"text",";"],[443,"text"," `"],[443,"text","main"],[443,"text","`"],[457,"text"," prints"],[457,"text"," the"],[457,"text"," resulting"],[473,"text"," number"],[473,"text","."],[473,"text"," It"],[491,"text"," silently"],[544,"text"," assumes"],[544,"text"," the"],[544,"text"," file"],[544,"text"," exists"],[544,"text",","],[544,"text"," contains"],[550,"text"," valid"],[550,"text"," JSON"],[550,"text",","],[550,"text"," and"],[550,"text"," that"],[566,"text"," the"],[566,"text"," top"],[566,"text","-level"],[566,"text"," value"],[566,"text"," is"],[566,"text"," a"],[582,"text"," list"],[582,"text"," of"],[582,"text"," objects"],[582,"text"," with"],[582,"text"," numeric"],[596,"text"," `"],[596,"text","price"],[596,"text","`"],[596,"text"," and"],[596,"text"," `"],[596,"text","q"],[611,"text","ty"],[611,"text","`"],[611,"text"," keys"],[611,"text","."],[611,"text"," There"],[629,"text"," is"],[629,"text"," no"],[629,"text"," validation"],[629,"text",","],[630,"text"," currency"],[653,"text"," rounding"],[666,"text",","],[666,"text"," or"],[667,"text"," user"],[672,"text","-facing"],[672,"text"," error"],[690,"text"," handling"],[690,"text","."],[690,"text"," Struct"],[704,"text","urally"],[704,"text"," it"],[704,"text"," clean"],[720,"text","ly"],[721,"text"," separates"],[721,"text"," I"],[735,"text","/O"],[735,"text"," (`"],[749,"text","load"],[749,"text","`)"],[749,"text"," from"],[749,"text"," a"],[768,"text"," pure"],[768,"text"," calculation"],[781,"text"," (`"],[781,"text","total"],[781,"text","`"],[781,"text","),"],[781,"text"," making"],[797,"text"," the"],[836,"text"," latter"],[836,"text"," easy"],[836,"text"," to"],[836,"text"," test"],[843,"text"," in"],[863,"text"," isolation"],[863,"text",".\n\n"],[863,"text","**"],[863,"text","Two"],[876,"text"," edge"],[876,"text"," cases"],[876,"text"," it"],[876,"text"," doesn"],[876,"text","'t"],[876,"text"," handle"],[892,"text","**\n\n"],[892,"text","1"],[892,"text","."],[892,"text"," **"],[892,"text","Missing"],[918,"text","/b"],[929,"text","ad"],[940,"text"," arguments"],[940,"text"," or"],[940,"text"," an"],[970,"text"," un"],[970,"text","read"],[970,"text","able"],[970,"text"," or"],[979,"text"," mal"],[979,"text","formed"],[979,"text"," file"],[993,"text",".**"],[993,"text"," `"],[993,"text","sys"],[993,"text",".argv"],[993,"text","["],[1009,"text","1"],[1009,"text","]"],[1009,"text","`"],[1009,"text"," raises"],[1031,"text"," `"],[1031,"text","Index"],[1031,"text","Error"],[1031,"text","`"],[1031,"text"," when"],[1040,"text"," no"],[1055,"text"," path"],[1075,"text"," is"],[1075,"text"," given"],[1093,"text",","],[1094,"text"," and"],[1094,"text"," a"],[1094,"text"," nonex"],[1110,"text","istent"],[1110,"text"," path"],[1110,"text",","],[1111,"text"," permission"],[1126,"text"," error"],[1126,"text",","],[1126,"text"," or"],[1126,"text"," invalid"],[1148,"text"," JSON"],[1149,"text"," propag"],[1162,"text","ates"],[1162,"text"," as"],[1162,"text"," an"],[1162,"text"," un"],[1162,"text","ca"],[1179,"text","ught"],[1179,"text"," `"],[1179,"text","File"],[1179,"text","NotFound"],[1179,"text","Error"],[1179,"text","`"],[1193,"text","/"],[1193,"text","`"],[1193,"text","JSON"],[1193,"text","Dec"],[1193,"text","ode"],[1193,"text","Error"],[1210,"text","`"],[1210,"text"," —"],[1226,"text"," a"],[1226,"text"," trace"],[1226,"text","back"],[1240,"text"," instead"],[1240,"text"," of"],[1241,"text"," a"],[1241,"text"," helpful"],[1256,"text"," message"],[1257,"text",".\n\n"],[1257,"text","2"],[1257,"text","."],[1257,"text"," **"],[1257,"text","Mal"],[1272,"text","formed"],[1273,"text"," or"],[1273,"text"," semantically"],[1290,"text"," invalid"],[1302,"text"," item"],[1302,"text"," data"],[1302,"text",".**"],[1302,"text"," A"],[1320,"text"," missing"],[1320,"text"," `"],[1320,"text","price"],[1334,"text","`"],[1334,"text"," or"],[1334,"text"," `"],[1334,"text","q"],[1334,"text","ty"],[1334,"text","`"],[1348,"text"," key"],[1348,"text"," raises"],[1348,"text"," `"],[1348,"text","Key"],[1348,"text","Error"],[1348,"text","`,"],[1369,"text"," a"],[1369,"text"," string"],[1381,"text"," or"],[1382,"text"," `"],[1394,"text","null"],[1395,"text","`"],[1395,"text"," value"],[1395,"text"," raises"],[1395,"text"," `"],[1421,"text","Type"],[1421,"text","Error"],[1421,"text","`,"],[1421,"text"," and"],[1421,"text"," negative"],[1421,"text"," or"],[1428,"text"," zero"],[1428,"text"," quantities"],[1428,"text"," are"],[1428,"text"," accepted"],[1444,"text"," without"],[1458,"text"," complaint"],[1478,"text",","],[1478,"text"," silently"],[1478,"text"," producing"],[1494,"text"," a"],[1510,"text"," nons"],[1529,"text","ens"],[1529,"text","ical"],[1529,"text"," total"],[1529,"text","."],[1529,"text"," Float"],[1547,"text"," prices"],[1548,"text"," are"],[1548,"text"," also"],[1556,"text"," summed"],[1556,"text"," without"],[1556,"text"," `"],[1574,"text","Decimal"],[1574,"text","`"],[1587,"text"," rounding"],[1588,"text",","],[1588,"text"," so"],[1602,"text"," totals"],[1658,"text"," can"],[1658,"text"," be"],[1658,"text"," off"],[1658,"text"," by"],[1659,"text"," fractions"],[1659,"text"," of"],[1659,"text"," a"],[1659,"text"," cent"],[1659,"text","."]],"typing":[[0,"tool_args","","bash"],[0,"tool_args","{\""],[16,"tool_args","command"],[16,"tool_args","\""],[16,"tool_args",": \""],[31,"tool_args","ls"],[31,"tool_args"," -"],[31,"tool_args","la"],[31,"tool_args","\""],[47,"tool_args",", \""],[62,"tool_args","description"],[62,"tool_args","\""],[62,"tool_args",": \""],[78,"tool_args","List"],[78,"tool_args"," files"],[78,"tool_args"," in"],[78,"tool_args"," workspace"],[97,"tool_args","\""],[97,"tool_args","}"],[123,"tool_args","","glob"],[139,"tool_args","{\""],[139,"tool_args","pattern"],[139,"tool_args","\""],[156,"tool_args",": \""],[156,"tool_args","**"],[156,"tool_args","/*"],[156,"tool_args","."],[157,"tool_args","py"],[170,"tool_args","\""],[170,"tool_args","}"],[320,"tool_args","","read"],[331,"tool_args","{\""],[332,"tool_args","file"],[332,"tool_args","_path"],[344,"tool_args","\""],[344,"tool_args",": \""],[344,"tool_args","calc"],[356,"tool_args",".py"],[356,"tool_args","\""],[369,"tool_args","}"],[390,"tool_args","","read"],[401,"tool_args","{\""],[401,"tool_args","file"],[401,"tool_args","_path"],[401,"tool_args","\""],[415,"tool_args",": \""],[415,"tool_args","test"],[415,"tool_args","_c"],[429,"tool_args","alc"],[430,"tool_args",".py"],[430,"tool_args","\""],[469,"tool_args","}"],[619,"tool_args","","bash"],[620,"tool_args","{\""],[620,"tool_args","command"],[620,"tool_args","\""],[620,"tool_args",": \""],[620,"tool_args","python"],[620,"tool_args"," test"],[620,"tool_args","_c"],[620,"tool_args","alc"],[620,"tool_args",".py"],[620,"tool_args",";"],[620,"tool_args"," echo"],[620,"tool_args"," \\\""],[677,"tool_args","exit"],[677,"tool_args",":"],[677,"tool_args"," $"],[677,"tool_args","?\\\""],[677,"tool_args","\""],[689,"tool_args",", \""],[689,"tool_args","description"],[690,"tool_args","\""],[690,"tool_args",": \""],[727,"tool_args","Run"],[727,"tool_args"," the"],[727,"tool_args"," failing"],[727,"tool_args"," test"],[727,"tool_args","\""],[728,"tool_args","}"],[878,"tool_args","","edit"],[889,"tool_args","{\""],[889,"tool_args","file"],[889,"tool_args","_path"],[912,"tool_args","\""],[912,"tool_args",": \""],[912,"tool_args","calc"],[922,"tool_args",".py"],[922,"tool_args","\""],[934,"tool_args",", \""],[934,"tool_args","old"],[934,"tool_args","_string"],[950,"tool_args","\""],[950,"tool_args",": \""],[950,"tool_args","   "],[964,"tool_args"," return"],[964,"tool_args"," a"],[964,"tool_args"," -"],[964,"tool_args"," b"],[964,"tool_args","\""],[996,"tool_args",", \""],[996,"tool_args","new"],[996,"tool_args","_string"],[996,"tool_args","\""],[1013,"tool_args",": \""],[1013,"tool_args","   "],[1013,"tool_args"," return"],[1013,"tool_args"," a"],[1013,"tool_args"," +"],[1028,"tool_args"," b"],[1028,"tool_args","\""],[1044,"tool_args","}"],[1194,"tool_args","","bash"],[1210,"tool_args","{\""],[1210,"tool_args","command"],[1210,"tool_args","\""],[1225,"tool_args",": \""],[1225,"tool_args","python"],[1225,"tool_args"," test"],[1240,"tool_args","_c"],[1240,"tool_args","alc"],[1240,"tool_args",".py"],[1240,"tool_args",";"],[1240,"tool_args"," echo"],[1240,"tool_args"," \\\""],[1256,"tool_args","exit"],[1257,"tool_args",":"],[1257,"tool_args"," $"],[1257,"tool_args","?\\\""],[1257,"tool_args","\""],[1287,"tool_args",", \""],[1287,"tool_args","description"],[1287,"tool_args","\""],[1300,"tool_args",": \""],[1300,"tool_args","R"],[1300,"tool_args","er"],[1300,"tool_args","un"],[1300,"tool_args"," the"],[1300,"tool_args"," test"],[1316,"tool_args"," after"],[1316,"tool_args"," fix"],[1316,"tool_args","\""],[1339,"tool_args","}"]]}};
+const SESSION = DATA.session;
 
 /* Presets. Voice fields map 1:1 to a future pack.toml entry:
  * w wave (pulse|tri|sine|noise), duty, oct (semitones over the agent root), dur, att, dec,
@@ -228,27 +266,27 @@ function resolve(p) {
   };
 }
 
-/* Layers: each can be switched off, take its voice from another preset, and set its level. */
-const LAYERS = [
-  { id: 'send', label: 'Send', hint: 'You press Send', kind: 'cue', c: 'var(--fg)' },
-  { id: 'think', label: 'Thinking', hint: 'Reasoning tokens stream', kind: 'reasoning', c: 'var(--think)' },
-  { id: 'write', label: 'Writing', hint: 'Answer tokens stream', kind: 'text', c: 'var(--pop)' },
-  { id: 'para', label: 'Paragraph', hint: 'A new paragraph starts', kind: 'cue', c: 'var(--pop)' },
-  { id: 'typing', label: 'Tool typing', hint: 'Model writes tool arguments', kind: 'tool_args', c: 'var(--tool)' },
-  { id: 'tool', label: 'Tool calls', hint: 'A tool starts and returns', kind: 'cue', c: 'var(--tool)' },
-  { id: 'done', label: 'Done', hint: 'The turn is finished', kind: 'cue', c: 'var(--ok)' },
-];
-const MIX_DEFAULT = () => Object.fromEntries(LAYERS.map((l) => [l.id, { on: true, src: 'card', level: 100 }]));
 
-/* Combine the auditioned preset with the mixer into one engine preset. */
-function buildPreset(cardId, mix) {
-  const base = resolve(BY_ID[cardId]);
-  const src = (layer) => mix[layer].src === 'card' ? base : resolve(BY_ID[mix[layer].src]);
-  const lv = (layer) => mix[layer].level / 100;
-  const voice = (layer, key) => { const s = src(layer); return Object.assign({}, s[key], { gain: s[key].gain * lv(layer), scale: s.scale }); };
-  const cueOf = (layer) => Object.assign({}, src(layer).cue, { level: lv(layer) });
+
+const LAYERS = [
+  { id: 'send', label: 'Send', hint: 'You press Send', c: 'var(--fg)' },
+  { id: 'think', label: 'Thinking', hint: 'Reasoning tokens stream', c: 'var(--think)' },
+  { id: 'write', label: 'Writing', hint: 'Answer tokens stream', c: 'var(--pop)' },
+  { id: 'para', label: 'Paragraph', hint: 'A new paragraph starts', c: 'var(--pop)' },
+  { id: 'typing', label: 'Tool typing', hint: 'Model types tool arguments', c: 'var(--tool)' },
+  { id: 'tool', label: 'Tool calls', hint: 'A tool starts and returns', c: 'var(--tool)' },
+  { id: 'done', label: 'Done', hint: 'The turn is finished', c: 'var(--ok)' },
+];
+const LAYER = Object.fromEntries(LAYERS.map((l) => [l.id, l]));
+const mixFor = (theme) => Object.fromEntries(LAYERS.map((l) => [l.id, { on: true, src: theme, level: 100 }]));
+
+function buildPreset(mix) {
+  const src = (l) => resolve(BY_ID[mix[l].src]);
+  const lv = (l) => mix[l].level / 100;
+  const voice = (l, key) => { const s = src(l); return Object.assign({}, s[key], { gain: s[key].gain * lv(l), scale: s.scale }); };
+  const cueOf = (l) => Object.assign({}, src(l).cue, { level: lv(l) });
   return {
-    scale: base.scale,
+    scale: src('write').scale,
     text: voice('write', 'text'), reasoning: voice('think', 'reasoning'), tool: voice('typing', 'tool'),
     pace: { text: src('write').pace.text, reasoning: src('think').pace.reasoning, tool: src('typing').pace.tool },
     cues: { prompt: cueOf('send'), para: cueOf('para'), tool_start: cueOf('tool'), tool_end: cueOf('tool'), done: cueOf('done') },
@@ -462,6 +500,8 @@ const Audio = {
   post(m) { if (this.node) this.node.port.postMessage(m); else if (this.ctx) this.queue.push(m); },
 };
 
+
+
 function hash8(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0) & 0xff; }
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const md = (raw) => esc(raw).replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
@@ -469,67 +509,217 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
 };
+function status(s) { document.getElementById('status').textContent = s; }
 
-/* Mixer UI */
-let mix = Object.assign(MIX_DEFAULT(), store.get('tokenpop-mix', {}));
-const mixEl = document.getElementById('mix');
-const options = '<option value="card">Card voice</option>' + PRESETS.map((p) => '<option value="' + p.id + '">' + p.name + '</option>').join('');
-function renderMix() {
-  mixEl.innerHTML = '';
+/* ---------- State ---------- */
+let mix = (() => {
+  const saved = store.get('tokenpop-mix-v3', null), m = mixFor('blip');
+  if (saved) for (const l of LAYERS) if (saved[l.id] && BY_ID[saved[l.id].src]) m[l.id] = Object.assign(m[l.id], saved[l.id]);
+  return m;
+})();
+let active = store.get('tokenpop-layer', 'write');
+if (!LAYER[active]) active = 'write';
+let shortlist = store.get('tokenpop-picks', []).filter((id) => BY_ID[id]);
+const save = () => { store.set('tokenpop-mix-v3', mix); store.set('tokenpop-layer', active); store.set('tokenpop-picks', shortlist); };
+
+/* ---------- Playback: one clip at a time, solo or full ---------- */
+let clip = null;
+function play(events, preset, onEvent, opts) {
+  stopClip(true);
+  const ready = Audio.init();
+  ready.then(() => {
+    Audio.post({ t: 'preset', v: preset });
+    clip = Object.assign({ events, i: 0, t0: performance.now() + 80, onEvent, len: (events.length ? events[events.length - 1][0] : 0) + 700 }, opts);
+    if (clip.onStart) clip.onStart();
+  });
+}
+function stopClip(quiet) {
+  if (clip && clip.onStop) clip.onStop();
+  clip = null;
+  if (!quiet) Audio.post({ t: 'panic' });
+}
+function post(kind, extra) { Audio.post({ t: 'ev', ev: Object.assign({ agent: 'dsh', kind, chars: 0, h: 0 }, extra || {}) }); }
+function tick(now) {
+  if (clip) {
+    const el = now - clip.t0;
+    while (clip.i < clip.events.length && clip.events[clip.i][0] <= el) clip.onEvent(clip.events[clip.i++], el);
+    if (clip.onFrame) clip.onFrame(el);
+    if (el > clip.len) { const c = clip; clip = null; if (c.onStop) c.onStop(); if (c.onEnd) c.onEnd(); }
+  }
+  requestAnimationFrame(tick);
+}
+function onPops(list) {
+  if (!clip || !clip.full) return;
+  for (const k of list) {
+    const layer = k === 'reasoning' ? 'think' : k === 'text' ? 'write' : k === 'tool_args' ? 'typing' : null;
+    if (layer) pulseLayer(layer);
+  }
+}
+
+/* ---------- Solo previews ---------- */
+const pvBody = document.getElementById('pv-body'), pvEl = document.getElementById('preview'), pvLabel = document.getElementById('pv-label');
+const caret = document.createElement('span'); caret.className = 'caret';
+const PARAS = ['Confirmed the failure: `add(2, 3)` returns `-1`.', 'Fixed and verified.', '**Summary:** `add` subtracted instead of adding.'];
+const SOLO = {
+  send: { events: [[0, 'prompt']], render: () => { pvBody.innerHTML = '<div class="pv-user">' + esc(SESSION.prompt) + '</div>'; } },
+  think: { events: DATA.solo.think },
+  write: { events: DATA.solo.write },
+  typing: { events: DATA.solo.typing },
+  para: { events: [[0, 'para', 0], [800, 'para', 1], [1600, 'para', 2]] },
+  tool: { events: [[0, 'tool_start', 'Bash(ls -la)'], [550, 'tool_end', 'total 16'], [1150, 'tool_start', 'Bash(python test_calc.py)'], [1800, 'tool_end', 'ok']] },
+  done: { events: [[0, 'done']] },
+};
+function soloPreview(layerId, voiceId) {
+  const m = JSON.parse(JSON.stringify(mix));
+  m[layerId].on = true;
+  if (voiceId) m[layerId].src = voiceId;
+  const def = SOLO[layerId];
+  pvEl.className = 'preview pv-' + layerId;
+  pvLabel.textContent = 'Solo · ' + LAYER[layerId].label + ' · ' + BY_ID[m[layerId].src].name;
+  let raw = '';
+  const tile = voiceId ? tileEl(voiceId) : null;
+  play(def.events, buildPreset(m), (r) => {
+    const k = r[1];
+    if (k === 'reasoning' || k === 'text' || k === 'tool_args') {
+      const s = r[2] || ''; raw += s;
+      let inner = pvBody.querySelector('.pv-text');
+      if (!inner) { pvBody.innerHTML = '<div class="pv-text"></div>'; inner = pvBody.firstChild; }
+      inner.innerHTML = k === 'text' ? md(raw) : esc(raw);
+      inner.appendChild(caret);
+      if (s) post(k, { chars: s.length, h: hash8(s) });
+    } else if (k === 'para') {
+      if (r[2] === 0) pvBody.innerHTML = '';
+      const p = document.createElement('div'); p.className = 'pv-body'; p.innerHTML = md(PARAS[r[2]]);
+      pvBody.appendChild(p); post('para');
+    } else if (k === 'tool_start') {
+      if (!pvBody.querySelector('.pv-line')) pvBody.innerHTML = '';
+      const d = document.createElement('div'); d.className = 'pv-line'; d.innerHTML = '● <b>' + esc(r[2]) + '</b>';
+      pvBody.appendChild(d); post('tool_start');
+    } else if (k === 'tool_end') {
+      const d = document.createElement('div'); d.className = 'pv-line'; d.innerHTML = '&nbsp;&nbsp;⎿ <span class="ok">' + esc(r[2]) + '</span>';
+      pvBody.appendChild(d); post('tool_end');
+    } else if (k === 'prompt') { def.render(); post('prompt'); }
+    else if (k === 'done') { pvBody.innerHTML = '<div class="pv-line"><span class="ok">✓</span> <b>Done</b> · completed in 9s</div>'; post('done'); }
+  }, {
+    onStart: () => {
+      pvBody.innerHTML = '';
+      document.querySelectorAll('.tile.sounding').forEach((t) => t.classList.remove('sounding'));
+      if (tile) { tile.style.setProperty('--dur', (def.events[def.events.length - 1][0] + 700) + 'ms'); void tile.offsetWidth; tile.classList.add('sounding'); }
+    },
+    onStop: () => { caret.remove(); if (tile) tile.classList.remove('sounding'); },
+  });
+}
+
+/* ---------- Themes ---------- */
+const themesEl = document.getElementById('themes');
+function renderThemes() {
+  const srcs = new Set(LAYERS.filter((l) => mix[l.id].on).map((l) => mix[l.id].src));
+  const current = srcs.size === 1 ? [...srcs][0] : null;
+  themesEl.innerHTML = PRESETS.map((p) =>
+    '<button class="theme" type="button" data-id="' + p.id + '" aria-pressed="' + (p.id === current) + '">' + esc(p.name) +
+    (shortlist.includes(p.id) ? '<span class="star" aria-label="starred">★</span>' : '') + '</button>').join('');
+}
+themesEl.addEventListener('click', (e) => {
+  const b = e.target.closest('.theme'); if (!b) return;
+  const keepOff = LAYERS.filter((l) => !mix[l.id].on).map((l) => l.id);
+  mix = mixFor(b.dataset.id);
+  keepOff.forEach((id) => { mix[id].on = false; });
+  save(); renderAll();
+  playFull();
+  status('Applied ' + BY_ID[b.dataset.id].name + ' to all layers');
+});
+
+/* ---------- Layer list ---------- */
+const listEl = document.getElementById('layer-list');
+function renderLayers() {
+  listEl.innerHTML = '';
   for (const l of LAYERS) {
     const m = mix[l.id];
-    const row = document.createElement('div');
-    row.className = 'row' + (m.on ? '' : ' disabled');
-    row.style.setProperty('--c', l.c);
-    row.innerHTML =
-      '<label class="tg" title="Turn ' + l.label + ' on or off"><input type="checkbox" id="on-' + l.id + '"' + (m.on ? ' checked' : '') + '><span class="sw"></span></label>' +
-      '<div class="lbl"><b>' + l.label + '</b><small>' + l.hint + '</small></div>' +
-      '<select id="src-' + l.id + '" aria-label="' + l.label + ' voice">' + options + '</select>' +
-      '<input type="range" id="lv-' + l.id + '" min="0" max="150" step="5" value="' + m.level + '" aria-label="' + l.label + ' level">';
-    row.querySelector('select').value = m.src;
-    row.querySelector('input[type=checkbox]').addEventListener('change', (e) => { m.on = e.target.checked; row.classList.toggle('disabled', !m.on); mixChanged(); });
-    row.querySelector('select').addEventListener('change', (e) => { m.src = e.target.value; mixChanged(); });
-    row.querySelector('input[type=range]').addEventListener('input', (e) => { m.level = +e.target.value; mixChanged(); });
-    mixEl.appendChild(row);
+    const li = document.createElement('li');
+    li.className = 'layer' + (l.id === active ? ' active' : '') + (m.on ? '' : ' off');
+    li.dataset.layer = l.id;
+    li.style.setProperty('--c', l.c);
+    li.innerHTML =
+      '<span class="dot"></span>' +
+      '<button class="layer-sel" type="button" aria-pressed="' + (l.id === active) + '"><b>' + l.label + '</b><span>' +
+        (m.on ? esc(BY_ID[m.src].name) + (m.level !== 100 ? ' · ' + m.level + '%' : '') : 'Off') + '</span></button>' +
+      '<label class="tg" title="' + (m.on ? 'Turn off ' : 'Turn on ') + l.label + '"><input type="checkbox" aria-label="' + l.label + ' on"' + (m.on ? ' checked' : '') + '><span class="sw"></span></label>';
+    li.querySelector('.layer-sel').addEventListener('click', () => selectLayer(l.id, true));
+    li.addEventListener('click', (e) => { if (e.target === li || e.target.classList.contains('dot')) selectLayer(l.id, true); });
+    li.querySelector('input').addEventListener('change', (e) => {
+      m.on = e.target.checked; save(); renderAll();
+      if (m.on) { selectLayer(l.id, true); } else status(l.label + ' is off');
+    });
+    listEl.appendChild(li);
   }
-  const foot = document.createElement('div');
-  foot.className = 'mix-foot';
-  foot.innerHTML = '<span>"Card voice" follows the voice you are playing.</span>';
-  mixEl.appendChild(foot);
-  renderPhases();
 }
-function mixChanged() {
-  store.set('tokenpop-mix', mix);
-  if (current) Audio.post({ t: 'mix', v: buildPreset(current.id, mix) });
-  renderPhases();
+function pulseLayer(id) {
+  const li = listEl.querySelector('[data-layer="' + id + '"]'); if (!li) return;
+  li.classList.add('hit'); clearTimeout(li._t); li._t = setTimeout(() => li.classList.remove('hit'), 120);
 }
-document.getElementById('reset-mix').addEventListener('click', () => { mix = MIX_DEFAULT(); store.set('tokenpop-mix', mix); renderMix(); mixChanged(); });
+function selectLayer(id, preview) {
+  active = id; save(); renderLayers(); renderPicker();
+  if (preview && mix[id].on) soloPreview(id);
+}
+document.getElementById('reset').addEventListener('click', () => { mix = mixFor('blip'); save(); renderAll(); status('Reset to Blip'); });
 
-/* Session view */
-const logEl = document.getElementById('log'), phasesEl = document.getElementById('phases'), nowEl = document.getElementById('now'), progEl = document.getElementById('prog');
+/* ---------- Picker ---------- */
+const tilesEl = document.getElementById('tiles');
+const tileEl = (id) => tilesEl.querySelector('[data-id="' + id + '"]');
+function renderPicker() {
+  const l = LAYER[active], m = mix[active];
+  document.getElementById('picker').style.setProperty('--c', l.c);
+  document.getElementById('picker-title').innerHTML = '<i style="background:' + l.c + '"></i><h2>' + l.label + ' voice</h2><small>' + l.hint + '</small>';
+  tilesEl.setAttribute('aria-label', l.label + ' voice');
+  const level = document.getElementById('level');
+  level.value = m.level; level.disabled = !m.on;
+  document.getElementById('level-out').textContent = m.level + '%';
+  const opts = [{ id: 'off', name: 'Off', line: 'No sound for this layer.' }].concat(PRESETS);
+  tilesEl.innerHTML = opts.map((p) => {
+    const checked = p.id === 'off' ? !m.on : (m.on && m.src === p.id);
+    return '<div class="tile' + (p.id === 'off' ? ' off' : '') + '" role="radio" tabindex="' + (checked ? 0 : -1) + '" aria-checked="' + checked + '" data-id="' + p.id + '">' +
+      '<b>' + esc(p.name) + '</b><span>' + esc(p.line) + '</span>' +
+      (p.id === 'off' ? '' : '<button class="star" type="button" tabindex="-1" aria-pressed="' + shortlist.includes(p.id) + '" aria-label="Star ' + esc(p.name) + '">' + (shortlist.includes(p.id) ? '★' : '☆') + '</button>') +
+      '</div>';
+  }).join('');
+  if (!m.on) { pvEl.className = 'preview'; pvLabel.textContent = 'Layer off'; pvBody.innerHTML = '<div class="pv-line">' + l.label + ' makes no sound. Pick a voice to turn it on.</div>'; }
+  else if (!clip) { pvEl.className = 'preview'; pvLabel.textContent = 'Solo preview'; pvBody.innerHTML = '<div class="pv-line">Click a voice to hear <b>' + l.label + '</b> on its own.</div>'; }
+}
+function chooseVoice(id) {
+  const m = mix[active];
+  if (id === 'off') { m.on = false; stopClip(); }
+  else { m.on = true; m.src = id; }
+  save(); renderLayers(); renderThemes(); renderPicker(); renderPhases();
+  if (id !== 'off') { soloPreview(active, id); tileEl(id) && tileEl(id).focus(); }
+}
+tilesEl.addEventListener('click', (e) => {
+  const star = e.target.closest('.star');
+  if (star) { const id = star.closest('.tile').dataset.id; shortlist = shortlist.includes(id) ? shortlist.filter((x) => x !== id) : shortlist.concat(id); save(); renderPicker(); renderThemes(); return; }
+  const t = e.target.closest('.tile'); if (t) chooseVoice(t.dataset.id);
+});
+tilesEl.addEventListener('keydown', (e) => {
+  const tiles = [...tilesEl.querySelectorAll('.tile')];
+  const i = tiles.indexOf(document.activeElement); if (i < 0) return;
+  const cols = Math.max(1, Math.round(tilesEl.clientWidth / tiles[0].offsetWidth));
+  const step = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: cols, ArrowUp: -cols }[e.key];
+  if (step) { e.preventDefault(); const n = tiles[(i + step + tiles.length) % tiles.length]; chooseVoice(n.dataset.id); }
+  else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); chooseVoice(tiles[i].dataset.id); }
+});
+const levelEl = document.getElementById('level');
+levelEl.addEventListener('input', () => { mix[active].level = +levelEl.value; document.getElementById('level-out').textContent = levelEl.value + '%'; save(); renderLayers(); });
+levelEl.addEventListener('change', () => { if (mix[active].on) soloPreview(active); });
+document.getElementById('solo').addEventListener('click', () => { if (mix[active].on) soloPreview(active); else status('Turn the layer on first'); });
+
+/* ---------- Full session ---------- */
+const logEl = document.getElementById('log'), phasesEl = document.getElementById('phases'), progEl = document.getElementById('prog'), fullBtn = document.getElementById('full');
 function renderPhases() {
   phasesEl.innerHTML = LAYERS.map((l) => '<span class="ph' + (mix[l.id].on ? '' : ' off') + '" data-layer="' + l.id + '" style="--c:' + l.c + '"><i></i>' + l.label + '</span>').join('');
 }
-function flash(layer) {
-  const el = phasesEl.querySelector('[data-layer="' + layer + '"]');
-  if (!el) return;
-  phasesEl.querySelectorAll('.ph.on').forEach((x) => x !== el && x.classList.remove('on'));
-  el.classList.add('on', 'hit');
-  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('hit'), 140);
+function flash(id) {
+  phasesEl.querySelectorAll('.ph.on').forEach((x) => x.dataset.layer !== id && x.classList.remove('on'));
+  const el = phasesEl.querySelector('[data-layer="' + id + '"]'); if (el) el.classList.add('on');
 }
-const caret = document.createElement('span'); caret.className = 'caret';
 let view = null;
-function resetView(name) {
-  logEl.innerHTML = '';
-  const u = document.createElement('div'); u.className = 'user'; u.textContent = SESSION.prompt; logEl.appendChild(u);
-  view = { cur: null, tools: [], t0: 0 };
-  nowEl.innerHTML = 'Playing <b>' + esc(name) + '</b>';
-}
-function idleView() {
-  logEl.innerHTML = '<div class="hint">Press play on any voice. The session replays here in sync with the sound, so you can tell which sound belongs to which moment.</div>';
-  nowEl.textContent = 'Press play on any voice';
-  phasesEl.querySelectorAll('.ph').forEach((x) => x.classList.remove('on'));
-}
 function closeCur(el) {
   const c = view.cur;
   if (c && c.kind === 'reasoning') { c.el.classList.add('closed'); c.el.textContent = '✻ Thought for ' + ((el - c.t) / 1000).toFixed(1) + 's'; }
@@ -538,16 +728,12 @@ function closeCur(el) {
 function block(kind, el) {
   if (view.cur && view.cur.kind === kind) return view.cur;
   closeCur(el);
-  const d = document.createElement('div');
-  d.className = kind === 'reasoning' ? 'think' : 'say';
-  logEl.appendChild(d);
+  const d = document.createElement('div'); d.className = kind === 'reasoning' ? 'think' : 'say'; logEl.appendChild(d);
   view.cur = { kind, el: d, raw: '', t: el };
   return view.cur;
 }
 function newTool(name) {
-  view.cur = null;
-  const d = document.createElement('div');
-  d.className = 'tool';
+  const d = document.createElement('div'); d.className = 'tool';
   d.innerHTML = '<div class="call"><i></i><span><span class="nm"></span><span class="arg"></span></span></div><div class="raw"></div>';
   d.querySelector('.nm').textContent = { bash: 'Bash', read: 'Read', glob: 'Glob', edit: 'Edit' }[name] || name;
   logEl.appendChild(d);
@@ -559,179 +745,85 @@ function cleanOut(name, out) {
   if (name === 'read') out = out.split('\n').filter((l) => !/^<\/?(path|type|content)>/.test(l)).join('\n');
   return (out.trim().split('\n')[0] || '(no output)').slice(0, 80);
 }
-
-/* Session replay: drives both the view and the engine from the same events. */
-const CLIP_MS = SESSION.events[SESSION.events.length - 1][0] + 900;
-let current = null, autoplay = false;
-function send(layer, kind, extra) {
-  if (!mix[layer].on) return;
-  flash(layer);
-  Audio.post({ t: 'ev', ev: Object.assign({ agent: 'dsh', kind, chars: 0, h: 0 }, extra || {}) });
-}
-function dispatch(r, el) {
+function fullSend(layer, kind, extra) { if (!mix[layer].on) return; flash(layer); post(kind, extra); }
+function fullEvent(r, el) {
   const k = r[1];
   if (k === 'reasoning') {
     const c = block('reasoning', el); c.raw += r[2]; c.el.textContent = c.raw; c.el.appendChild(caret);
-    send('think', 'reasoning', { chars: r[2].length, h: hash8(r[2]) });
+    fullSend('think', 'reasoning', { chars: r[2].length, h: hash8(r[2]) });
   } else if (k === 'text') {
-    const s = r[2];
-    const fresh = !(view.cur && view.cur.kind === 'text');
-    const c = block('text', el);
-    const breakHere = fresh || (/\n\s*\n/.test(c.raw.slice(-2) + s) && !/\n\s*\n/.test(c.raw.slice(-2)));
-    if (breakHere) send('para', 'para');
+    const s = r[2], fresh = !(view.cur && view.cur.kind === 'text'), c = block('text', el);
+    if (fresh || (/\n\s*\n/.test(c.raw.slice(-2) + s) && !/\n\s*\n/.test(c.raw.slice(-2)))) fullSend('para', 'para');
     c.raw += s; c.el.innerHTML = md(c.raw); c.el.appendChild(caret);
-    send('write', 'text', { chars: s.length, h: hash8(s) });
+    fullSend('write', 'text', { chars: s.length, h: hash8(s) });
   } else if (k === 'tool_args') {
     let t = view.cur;
-    if (r[3] || !t || t.kind !== 'tool') t = newTool(r[3] || 'tool');
-    t.raw += r[2]; t.el.querySelector('.raw').textContent = t.raw; t.el.querySelector('.raw').appendChild(caret);
-    if (r[2]) send('typing', 'tool_args', { chars: r[2].length, h: hash8(r[2]) });
+    if (r[3] || !t || t.kind !== 'tool') { closeCur(el); t = newTool(r[3] || 'tool'); }
+    t.raw += r[2]; const raw = t.el.querySelector('.raw'); raw.textContent = t.raw; raw.appendChild(caret);
+    if (r[2]) fullSend('typing', 'tool_args', { chars: r[2].length, h: hash8(r[2]) });
   } else if (k === 'tool_start') {
     const t = view.tools.find((x) => !x.started && x.name === r[2]) || view.tools.find((x) => !x.started) || newTool(r[2]);
     t.started = true; t.el.querySelector('.arg').textContent = '(' + r[3] + ')';
-    t.el.querySelector('.raw').remove(); if (view.cur === t) view.cur = null;
-    send('tool', 'tool_start');
+    const raw = t.el.querySelector('.raw'); if (raw) raw.remove();
+    if (view.cur === t) view.cur = null;
+    fullSend('tool', 'tool_start');
   } else if (k === 'tool_end') {
     const t = view.tools.find((x) => x.started && !x.ended && x.name === r[2]) || view.tools.find((x) => x.started && !x.ended);
     if (t) { t.ended = true; t.el.classList.add('ok'); const o = document.createElement('div'); o.className = 'out'; o.textContent = '⎿ ' + cleanOut(r[2], r[3] || ''); t.el.appendChild(o); }
-    send('tool', 'tool_end');
-  } else if (k === 'prompt') send('send', 'prompt');
-  else if (k === 'done') { closeCur(el); caret.remove(); send('done', 'done'); }
+    fullSend('tool', 'tool_end');
+  } else if (k === 'prompt') fullSend('send', 'prompt');
+  else if (k === 'done') { closeCur(el); caret.remove(); fullSend('done', 'done'); }
+  const stick = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 60;
+  if (stick) logEl.scrollTop = logEl.scrollHeight;
 }
-
-/* Cards */
-const grid = document.getElementById('grid');
-const cards = new Map();
-const playIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>';
-const stopIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/></svg>';
-PRESETS.forEach((p, i) => {
-  const el = document.createElement('article');
-  el.className = 'card';
-  el.innerHTML =
-    '<div class="head"><div class="name"></div><div class="idx">' + String(i + 1).padStart(2, '0') + '</div></div>' +
-    '<div class="line"></div><div class="tags"></div>' +
-    '<div class="ctl"><button class="play" type="button"></button><canvas class="meter"></canvas>' +
-    '<button class="pick" type="button" aria-pressed="false">☆ Pick</button></div>';
-  el.querySelector('.name').textContent = p.name;
-  el.querySelector('.line').textContent = p.line;
-  el.querySelector('.tags').innerHTML = p.tags.map((t) => '<span class="tag">' + t + '</span>').join('');
-  const play = el.querySelector('.play');
-  play.innerHTML = playIcon; play.setAttribute('aria-label', 'Play ' + p.name);
-  play.addEventListener('click', () => { autoplay = false; current && current.id === p.id ? stop() : start(p.id); });
-  el.querySelector('.pick').addEventListener('click', () => togglePick(p.id));
-  grid.appendChild(el);
-  cards.set(p.id, { el, play, pick: el.querySelector('.pick'), canvas: el.querySelector('.meter'), marks: [] });
-});
-
-function start(id) {
-  stop(true);
-  const ready = Audio.init();
-  ready.then(() => {
-    Audio.post({ t: 'preset', v: buildPreset(id, mix) });
-    current = { id, t0: performance.now() + 120, i: 0 };
-    const c = cards.get(id);
-    c.marks = []; c.el.classList.add('playing');
-    c.play.innerHTML = stopIcon; c.play.setAttribute('aria-label', 'Stop');
-    resetView(BY_ID[id].name);
+function idleLog() {
+  logEl.innerHTML = '<div class="hint">Play the full session to hear every layer together, in sync with what the agent is doing.</div>';
+  phasesEl.querySelectorAll('.ph').forEach((x) => x.classList.remove('on'));
+}
+function setFullBtn(playing) {
+  fullBtn.querySelector('span').textContent = playing ? 'Stop' : 'Play full session';
+  fullBtn.querySelector('svg').innerHTML = playing ? '<rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/>' : '<path d="M4 2.5v11l9-5.5z" fill="currentColor"/>';
+}
+function playFull() {
+  logEl.innerHTML = '';
+  const u = document.createElement('div'); u.className = 'user'; u.textContent = SESSION.prompt; logEl.appendChild(u);
+  view = { cur: null, tools: [] };
+  play(SESSION.events, buildPreset(mix), fullEvent, {
+    full: true,
+    onStart: () => { setFullBtn(true); },
+    onFrame: (el) => { progEl.style.width = Math.min(100, el / (SESSION.events[SESSION.events.length - 1][0] + 700) * 100) + '%'; },
+    onStop: () => { setFullBtn(false); caret.remove(); progEl.style.width = '0'; },
   });
 }
-function stop(quiet) {
-  if (current) {
-    const c = cards.get(current.id);
-    c.el.classList.remove('playing'); c.play.innerHTML = playIcon; c.play.setAttribute('aria-label', 'Play ' + BY_ID[current.id].name);
-  }
-  current = null; progEl.style.width = '0';
-  if (!quiet) { Audio.post({ t: 'panic' }); autoplay = false; caret.remove(); idleView(); status(''); }
-}
-function onPops(list) {
-  if (!current) return;
-  const c = cards.get(current.id), now = performance.now();
-  for (const k of list) c.marks.push([now, k]);
-}
-function tick(now) {
-  if (current) {
-    const el = now - current.t0;
-    const ev = SESSION.events;
-    const stick = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 40;
-    while (current.i < ev.length && ev[current.i][0] <= el) dispatch(ev[current.i++], el);
-    if (stick) logEl.scrollTop = logEl.scrollHeight;
-    progEl.style.width = Math.min(100, Math.max(0, el / CLIP_MS * 100)) + '%';
-    if (el > CLIP_MS) {
-      const id = current.id;
-      stop(true);
-      if (autoplay) {
-        const idx = PRESETS.findIndex((p) => p.id === id);
-        if (idx < PRESETS.length - 1) setTimeout(() => autoplay && start(PRESETS[idx + 1].id), 600);
-        else { autoplay = false; status('Played all 15'); }
-      }
-    }
-  }
-  for (const c of cards.values()) drawMeter(c, now);
-  requestAnimationFrame(tick);
-}
+fullBtn.addEventListener('click', () => { if (clip && clip.full) { stopClip(); idleLog(); } else playFull(); });
 
-let colors = {};
-function readColors() {
-  const cs = getComputedStyle(document.documentElement), g = (n) => cs.getPropertyValue(n).trim();
-  colors = { text: g('--pop'), reasoning: g('--think'), tool_args: g('--tool'), cue: g('--fg'), line: g('--line') };
-}
-const SPAN = 2500;
-function drawMeter(c, now) {
-  const cv = c.canvas, dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
-  if (!w) return;
-  if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-  const g = cv.getContext('2d');
-  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
-  g.fillStyle = colors.line; g.fillRect(0, h / 2, w, 1);
-  while (c.marks.length && c.marks[0][0] < now - SPAN) c.marks.shift();
-  for (const [t, k] of c.marks) {
-    const x = w - (now - t) / SPAN * w;
-    const y = k === 'reasoning' ? h * 0.74 : k === 'tool_args' ? h * 0.26 : h / 2;
-    g.beginPath();
-    if (k === 'cue') { g.strokeStyle = colors.cue; g.lineWidth = 1.5; g.arc(x, h / 2, 5.5, 0, Math.PI * 2); g.stroke(); }
-    else { g.fillStyle = colors[k]; g.arc(x, y, 3, 0, Math.PI * 2); g.fill(); }
-  }
-}
-
-/* Picks */
-let picks = store.get('tokenpop-picks', []).filter((id) => BY_ID[id]);
-function togglePick(id) { picks = picks.includes(id) ? picks.filter((x) => x !== id) : picks.concat(id); store.set('tokenpop-picks', picks); renderPicks(); }
-function renderPicks() {
-  document.getElementById('picks').innerHTML = '<span class="label">Picks</span>' + (picks.length
-    ? picks.map((id, i) => '<span class="chip">' + (i + 1) + '. ' + BY_ID[id].name + '</span>').join('')
-    : '<span class="empty">Nothing picked yet</span>');
-  for (const [id, c] of cards) {
-    const on = picks.includes(id);
-    c.pick.setAttribute('aria-pressed', String(on)); c.pick.textContent = on ? '★ Picked' : '☆ Pick';
-    c.el.classList.toggle('picked', on);
-  }
-}
-function status(s) { document.getElementById('status').textContent = s; }
-function summary() {
-  const lines = ['tokenpop picks: ' + (picks.length ? picks.map((id) => BY_ID[id].name + ' (' + id + ')').join(', ') : '(none)')];
-  const changed = LAYERS.filter((l) => { const m = mix[l.id]; return !m.on || m.src !== 'card' || m.level !== 100; });
-  lines.push('layers: ' + (changed.length ? changed.map((l) => {
+/* ---------- Export ---------- */
+function config() {
+  const srcs = new Set(LAYERS.filter((l) => mix[l.id].on).map((l) => mix[l.id].src));
+  const lines = ['# tokenpop sound config', 'theme = "' + (srcs.size === 1 ? [...srcs][0] : 'custom') + '"', ''];
+  for (const l of LAYERS) {
     const m = mix[l.id];
-    return l.label + '=' + (m.on ? (m.src === 'card' ? 'card voice' : BY_ID[m.src].name) + ' ' + m.level + '%' : 'off');
-  }).join(', ') : 'all on, card voice, 100%'));
+    lines.push('[layers.' + l.id + ']');
+    lines.push(m.on ? 'voice = "' + m.src + '"\nlevel = ' + m.level : 'enabled = false');
+  }
+  lines.push('', '# shortlist: ' + (shortlist.length ? shortlist.map((id) => BY_ID[id].name).join(', ') : '(none)'));
   return lines.join('\n');
 }
 document.getElementById('copy').addEventListener('click', () => {
-  const text = summary();
+  const text = config();
   const fallback = () => {
     const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} ta.remove();
-    status(ok ? 'Copied' : text);
+    status(ok ? 'Copied' : 'Copy failed');
   };
   try { navigator.clipboard.writeText(text).then(() => status('Copied'), fallback); } catch (e) { fallback(); }
 });
-document.getElementById('play-all').addEventListener('click', () => { autoplay = true; start(PRESETS[0].id); status('Playing all 15 in order'); });
 document.getElementById('vol').addEventListener('input', (e) => {
   volume = e.target.value / 100;
   if (Audio.gain) Audio.gain.gain.setTargetAtTime(volToGain(volume), Audio.ctx.currentTime, 0.02);
 });
 
-readColors(); setInterval(readColors, 1000);
-renderMix(); renderPicks(); idleView();
+function renderAll() { renderThemes(); renderLayers(); renderPicker(); renderPhases(); }
+renderAll(); idleLog();
 requestAnimationFrame(tick);
 </script>
