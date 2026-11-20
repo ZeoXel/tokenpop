@@ -19,6 +19,12 @@ agent adapter --(JSONL over a Unix socket: kind, char count, 8-bit hash)--> toke
   start/end, errors, approval requests, and completion get one-shot cues.
 - Each agent gets its own pitch range and stereo position.
 
+## Playground
+
+`web/playground.html` is a self-contained page that replays two recorded dsh sessions
+with text and sound side by side. It runs a JavaScript port of the engine in an
+AudioWorklet, and shows chunk arrivals next to the pops actually played.
+
 ## Try it
 
 ```sh

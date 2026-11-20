@@ -1,0 +1,744 @@
+<title>tokenpop Playground</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+/* Layout: a single working console. Controls on top, one or two terminal panes, a composer at the bottom. */
+:root {
+  --bg: #f4f2f7;
+  --panel: #ffffff;
+  --panel-2: #f8f6fb;
+  --line: #e1dce8;
+  --fg: #1c1922;
+  --dim: #6c6578;
+  --pop: #d2397f;
+  --think: #4d5bd1;
+  --tool: #9a6a00;
+  --ok: #1d8450;
+  --err: #c43333;
+  --pop-soft: rgba(210, 57, 127, .10);
+  --font-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121015; --panel: #1a1720; --panel-2: #15131a; --line: #2b2634; --fg: #ece7f3; --dim: #8f879d;
+    --pop: #ff7db5; --think: #9da9ff; --tool: #f0c060; --ok: #6fd39a; --err: #ff6b6b; --pop-soft: rgba(255, 125, 181, .12);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121015; --panel: #1a1720; --panel-2: #15131a; --line: #2b2634; --fg: #ece7f3; --dim: #8f879d;
+  --pop: #ff7db5; --think: #9da9ff; --tool: #f0c060; --ok: #6fd39a; --err: #ff6b6b; --pop-soft: rgba(255, 125, 181, .12);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-ui); font-size: 14px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 28px;
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.wordmark { font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -.02em; line-height: 1; display: inline-flex; align-items: baseline; }
+.wordmark .dot { display: inline-block; width: .32em; height: .32em; border-radius: 50%; background: var(--pop); margin-left: .08em; transform-origin: center; }
+.wordmark .dot.hit { animation: hit .16s ease-out; }
+@keyframes hit { 0% { transform: scale(1.7); } 100% { transform: scale(1); } }
+.tagline { color: var(--dim); font-size: 14px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.ctl { display: flex; align-items: center; gap: 8px; }
+.ctl-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--panel); }
+.seg button { font: 500 13px var(--font-ui); color: var(--dim); background: transparent; border: 0; padding: 6px 11px; cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { color: var(--fg); background: var(--pop-soft); box-shadow: inset 0 -2px 0 var(--pop); }
+.seg button:focus-visible, .send:focus-visible, .switch input:focus-visible + span, input[type=range]:focus-visible { outline: 2px solid var(--pop); outline-offset: 2px; }
+.switch { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
+.switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.switch span { width: 30px; height: 18px; border-radius: 9px; background: var(--line); position: relative; transition: background .15s; }
+.switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--panel); transition: transform .15s; }
+.switch input:checked + span { background: var(--think); }
+.switch input:checked + span::after { transform: translateX(12px); }
+input[type=range] { width: 110px; accent-color: var(--pop); }
+
+.scenarios { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+/* Stage */
+.stage { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.stage.duet { grid-template-columns: 1fr 1fr; }
+@media (max-width: 760px) { .stage.duet { grid-template-columns: 1fr; } }
+
+.pane { min-width: 0; display: flex; flex-direction: column; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.pane-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--line); background: var(--panel-2); font-size: 12.5px; }
+.pane-title { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.pane-title b { font-weight: 600; white-space: nowrap; }
+.pane-title .cwd { color: var(--dim); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chan { font: 600 10.5px var(--font-mono); color: var(--dim); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; }
+.state { font: 500 12px var(--font-mono); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; color: var(--dim); }
+.state i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.state[data-s="thinking"] { color: var(--think); } .state[data-s="thinking"] i { background: var(--think); }
+.state[data-s="writing"] { color: var(--pop); } .state[data-s="writing"] i { background: var(--pop); }
+.state[data-s="tool"] { color: var(--tool); } .state[data-s="tool"] i { background: var(--tool); }
+.state[data-s="done"] { color: var(--ok); } .state[data-s="done"] i { background: var(--ok); }
+
+.log { font-family: var(--font-mono); font-size: 13px; line-height: 1.6; padding: 14px 16px 18px; height: clamp(320px, 52vh, 560px); overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 12px; overflow-wrap: anywhere; }
+.stage.duet .log { height: clamp(300px, 46vh, 520px); }
+@media (max-width: 760px) { .stage.duet .log { height: 300px; } }
+.welcome { color: var(--dim); display: flex; flex-direction: column; gap: 6px; }
+.welcome .k { color: var(--fg); }
+.user { color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.user::before { content: "› "; color: var(--pop); font-weight: 600; }
+
+.think { color: var(--dim); }
+.think .th { color: var(--think); font-size: 12px; cursor: pointer; user-select: none; display: inline-flex; gap: 6px; align-items: center; background: none; border: 0; padding: 0; font: inherit; font-size: 12px; }
+.think .th::before { content: "✻"; }
+.think .tb { font-style: italic; white-space: pre-wrap; max-height: 7.5em; overflow: hidden; margin-top: 2px; border-left: 2px solid var(--line); padding-left: 10px; display: flex; flex-direction: column-reverse; }
+.think.closed .tb { display: none; }
+
+.say { white-space: pre-wrap; }
+.say code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; font-size: 12.5px; }
+.say strong { font-weight: 600; }
+
+.tool { display: flex; flex-direction: column; gap: 3px; }
+.tool .call { display: flex; gap: 8px; align-items: baseline; }
+.tool .call i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--tool); transform: translateY(-1px); }
+.tool.running .call i { animation: blink 1s steps(2, start) infinite; }
+.tool.ok .call i { background: var(--ok); }
+.tool.bad .call i { background: var(--err); }
+.tool .name { color: var(--tool); font-weight: 600; }
+.tool .arg { color: var(--fg); }
+.tool .raw { color: var(--dim); font-size: 12px; white-space: pre-wrap; padding-left: 16px; }
+.tool .out { color: var(--dim); font-size: 12px; white-space: pre-wrap; padding-left: 16px; position: relative; }
+.tool .out::before { content: "⎿"; position: absolute; left: 2px; color: var(--line); }
+.tool.bad .out { color: var(--err); }
+
+.caret { display: inline-block; width: .55em; height: 1.05em; vertical-align: -0.18em; background: var(--pop); margin-left: 1px; animation: blink 1s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+
+.lane { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; align-items: center; padding: 6px 14px 8px; border-top: 1px solid var(--line); background: var(--panel-2); }
+.lane-labels { display: grid; gap: 2px; font: 600 10px var(--font-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--dim); }
+.lane canvas { width: 100%; height: 40px; display: block; }
+.lane-foot { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 8px; font: 11px var(--font-mono); color: var(--dim); font-variant-numeric: tabular-nums; margin-top: 2px; }
+
+/* Composer */
+.composer { display: flex; gap: 10px; align-items: stretch; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 10px 10px 14px; }
+.composer textarea { flex: 1; min-width: 0; resize: none; border: 0; background: transparent; color: var(--fg); font: 13.5px/1.5 var(--font-mono); height: 3.2em; outline: none; }
+.send { flex: none; align-self: flex-end; display: inline-flex; align-items: center; gap: 8px; font: 600 14px var(--font-ui); color: #fff; background: var(--pop); border: 0; border-radius: 9px; padding: 10px 16px; cursor: pointer; }
+.send:hover { filter: brightness(1.06); }
+.send svg { width: 15px; height: 15px; }
+.send.stop { background: var(--fg); color: var(--bg); }
+
+.foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 18px; color: var(--dim); font-size: 12.5px; }
+.foot a { color: inherit; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 8px; height: 8px; border-radius: 50%; }
+.note { color: var(--dim); font-size: 12.5px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wordmark .dot.hit, .caret, .tool.running .call i { animation: none; }
+}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="wordmark" aria-label="tokenpop">tokenpop<span class="dot" id="logo-dot"></span></div>
+      <div class="tagline">Hear your agents think. Press Send and listen.</div>
+    </div>
+    <div class="controls">
+      <div class="ctl">
+        <span class="ctl-label" id="pack-label">Sound</span>
+        <div class="seg" role="group" aria-labelledby="pack-label" id="pack-seg">
+          <button type="button" data-pack="blip" aria-pressed="true">Blip</button>
+          <button type="button" data-pack="mech" aria-pressed="false">Mech</button>
+          <button type="button" data-pack="chip" aria-pressed="false">Chip</button>
+        </div>
+      </div>
+      <label class="switch" for="think-sound"><input type="checkbox" id="think-sound" checked><span></span>Thinking sound</label>
+      <div class="ctl">
+        <label class="ctl-label" for="vol">Volume</label>
+        <input type="range" id="vol" min="0" max="100" value="55">
+      </div>
+    </div>
+  </header>
+
+  <div class="scenarios">
+    <span class="ctl-label" id="scn-label">Session</span>
+    <div class="seg" role="group" aria-labelledby="scn-label" id="scn-seg">
+      <button type="button" data-scn="A" aria-pressed="true">Fix a failing test</button>
+      <button type="button" data-scn="B" aria-pressed="false">Explain a file</button>
+      <button type="button" data-scn="duet" aria-pressed="false">Two agents at once</button>
+    </div>
+    <span class="note" id="duet-note" hidden>Headphones help: agent 1 sits left, agent 2 sits right.</span>
+  </div>
+
+  <main class="stage" id="stage"></main>
+
+  <form class="composer" id="composer">
+    <textarea id="prompt" readonly aria-label="Prompt"></textarea>
+    <button class="send" id="send" type="submit">
+      <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 8h11M9 3.5 13.5 8 9 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="send-label">Send</span>
+    </button>
+  </form>
+
+  <footer class="foot">
+    <div class="legend" aria-label="Sound legend">
+      <span><i style="background:var(--think)"></i>thinking</span>
+      <span><i style="background:var(--pop)"></i>writing</span>
+      <span><i style="background:var(--tool)"></i>typing a tool call</span>
+    </div>
+    <div>Replays real DeepSeek Harness sessions recorded with the tokenpop adapter. Sound is synthesized live by a port of the tokenpop engine. <span id="audio-mode"></span></div>
+  </footer>
+</div>
+
+<script>
+const SESSIONS = {"A":{"prompt":"The test in test_calc.py is failing. Run it, find the bug, fix it, and rerun to confirm. Then summarize the fix in two sentences.","events":[[0,"prompt"],[2300,"text","I"],[2316,"text","'ll"],[2316,"text"," start"],[2316,"text"," by"],[2316,"text"," looking"],[2330,"text"," at"],[2330,"text"," the"],[2330,"text"," files"],[2330,"text"," in"],[2330,"text"," the"],[2346,"text"," workspace"],[2347,"text","."],[2379,"tool_args","","bash"],[2379,"tool_args","{\""],[2395,"tool_args","command"],[2395,"tool_args","\""],[2395,"tool_args",": \""],[2410,"tool_args","ls"],[2410,"tool_args"," -"],[2410,"tool_args","la"],[2410,"tool_args","\""],[2426,"tool_args",", \""],[2441,"tool_args","description"],[2441,"tool_args","\""],[2441,"tool_args",": \""],[2457,"tool_args","List"],[2457,"tool_args"," files"],[2457,"tool_args"," in"],[2457,"tool_args"," workspace"],[2476,"tool_args","\""],[2476,"tool_args","}"],[2502,"tool_args","","glob"],[2518,"tool_args","{\""],[2518,"tool_args","pattern"],[2518,"tool_args","\""],[2535,"tool_args",": \""],[2535,"tool_args","**"],[2535,"tool_args","/*"],[2535,"tool_args","."],[2536,"tool_args","py"],[2549,"tool_args","\""],[2549,"tool_args","}"],[2589,"tool_start","bash","ls -la"],[2625,"tool_end","bash","total 16\ndrwxr-xr-x 2 dev root 4096 Nov 20 07:49 .\ndrwxr-xr-x 8 dev root 4096 Nov 20 07:50 ..\n-rw-r--r-- 1 dev root   65 Nov 20 07:49 calc.py\n-rw-r--r-- 1 dev root   82 Nov 20 07:49 test_calc.py",0],[2626,"tool_start","glob","**/*.py"],[2782,"tool_end","glob","calc.py\ntest_calc.py",0],[4068,"tool_args","","read"],[4079,"tool_args","{\""],[4080,"tool_args","file"],[4080,"tool_args","_path"],[4092,"tool_args","\""],[4092,"tool_args",": \""],[4092,"tool_args","calc"],[4104,"tool_args",".py"],[4104,"tool_args","\""],[4117,"tool_args","}"],[4138,"tool_args","","read"],[4149,"tool_args","{\""],[4149,"tool_args","file"],[4149,"tool_args","_path"],[4149,"tool_args","\""],[4163,"tool_args",": \""],[4163,"tool_args","test"],[4163,"tool_args","_c"],[4177,"tool_args","alc"],[4178,"tool_args",".py"],[4178,"tool_args","\""],[4217,"tool_args","}"],[4220,"tool_start","read","calc.py"],[4221,"tool_start","read","test_calc.py"],[4230,"tool_end","read","<path>~/demo/calc.py<\/path>\n<type>file<\/type>\n<content>\n1: def add(a, b):\n2:     return a - b\n3: \n4: def mul(a, b):\n… 4 more lines",0],[4232,"tool_end","read","<path>~/demo/test_calc.py<\/path>\n<type>file<\/type>\n<content>\n1: from calc import add, mul\n2: assert add(2, 3) == 5\n3: assert mul(2, 3) == 6\n4: print(\"ok\")\n… 3 more lines",0],[6161,"tool_args","","bash"],[6162,"tool_args","{\""],[6162,"tool_args","command"],[6162,"tool_args","\""],[6162,"tool_args",": \""],[6162,"tool_args","python"],[6162,"tool_args"," test"],[6162,"tool_args","_c"],[6162,"tool_args","alc"],[6162,"tool_args",".py"],[6162,"tool_args",";"],[6162,"tool_args"," echo"],[6162,"tool_args"," \\\""],[6219,"tool_args","exit"],[6219,"tool_args",":"],[6219,"tool_args"," $"],[6219,"tool_args","?\\\""],[6219,"tool_args","\""],[6231,"tool_args",", \""],[6231,"tool_args","description"],[6232,"tool_args","\""],[6232,"tool_args",": \""],[6269,"tool_args","Run"],[6269,"tool_args"," the"],[6269,"tool_args"," failing"],[6269,"tool_args"," test"],[6269,"tool_args","\""],[6270,"tool_args","}"],[6317,"tool_start","bash","python test_calc.py; echo \"exit: $?\""],[6400,"tool_end","bash","exit: 1\n[stderr]\nTraceback (most recent call last):\n  File \"~/demo/test_calc.py\", line 2, in <module>\n    assert add(2, 3) == 5\n           ^^^^^^^^^^^^^^\nAssertionError",0],[7556,"reasoning","Bug"],[7794,"reasoning",":"],[7814,"reasoning"," add"],[7814,"reasoning"," returns"],[7826,"reasoning"," a"],[7827,"reasoning"," -"],[7827,"reasoning"," b"],[7827,"reasoning","."],[7827,"reasoning"," Fix"],[7839,"reasoning","."],[7857,"text","Confirmed"],[7857,"text"," the"],[7870,"text"," failure"],[7870,"text",":"],[7870,"text"," `"],[7870,"text","add"],[7870,"text","("],[7883,"text","2"],[7884,"text",","],[7884,"text"," "],[7884,"text","3"],[7884,"text",")`"],[7884,"text"," returns"],[7900,"text"," `"],[7900,"text","-"],[7900,"text","1"],[7913,"text","`"],[7913,"text"," because"],[7929,"text"," `"],[7929,"text","add"],[7929,"text","`"],[7944,"text"," subtract"],[7944,"text","s"],[7957,"text","."],[7957,"text"," Fix"],[7957,"text","ing"],[7974,"text",":"],[7990,"tool_args","","edit"],[8001,"tool_args","{\""],[8001,"tool_args","file"],[8001,"tool_args","_path"],[8024,"tool_args","\""],[8024,"tool_args",": \""],[8024,"tool_args","calc"],[8034,"tool_args",".py"],[8034,"tool_args","\""],[8046,"tool_args",", \""],[8046,"tool_args","old"],[8046,"tool_args","_string"],[8062,"tool_args","\""],[8062,"tool_args",": \""],[8062,"tool_args","   "],[8076,"tool_args"," return"],[8076,"tool_args"," a"],[8076,"tool_args"," -"],[8076,"tool_args"," b"],[8076,"tool_args","\""],[8108,"tool_args",", \""],[8108,"tool_args","new"],[8108,"tool_args","_string"],[8108,"tool_args","\""],[8125,"tool_args",": \""],[8125,"tool_args","   "],[8125,"tool_args"," return"],[8125,"tool_args"," a"],[8125,"tool_args"," +"],[8140,"tool_args"," b"],[8140,"tool_args","\""],[8156,"tool_args","}"],[8186,"tool_start","edit","calc.py"],[8198,"tool_end","edit","The file ~/demo/calc.py has been updated successfully.",0],[9188,"tool_args","","bash"],[9204,"tool_args","{\""],[9204,"tool_args","command"],[9204,"tool_args","\""],[9219,"tool_args",": \""],[9219,"tool_args","python"],[9219,"tool_args"," test"],[9234,"tool_args","_c"],[9234,"tool_args","alc"],[9234,"tool_args",".py"],[9234,"tool_args",";"],[9234,"tool_args"," echo"],[9234,"tool_args"," \\\""],[9250,"tool_args","exit"],[9251,"tool_args",":"],[9251,"tool_args"," $"],[9251,"tool_args","?\\\""],[9251,"tool_args","\""],[9281,"tool_args",", \""],[9281,"tool_args","description"],[9281,"tool_args","\""],[9294,"tool_args",": \""],[9294,"tool_args","R"],[9294,"tool_args","er"],[9294,"tool_args","un"],[9294,"tool_args"," the"],[9294,"tool_args"," test"],[9310,"tool_args"," after"],[9310,"tool_args"," fix"],[9310,"tool_args","\""],[9333,"tool_args","}"],[9362,"tool_start","bash","python test_calc.py; echo \"exit: $?\""],[9388,"tool_end","bash","ok\nexit: 0",0],[10535,"text","Test"],[10547,"text"," passes"],[10547,"text"," now"],[10565,"text"," ("],[10565,"text","exit"],[10565,"text"," "],[10578,"text","0"],[10578,"text",","],[10579,"text"," prints"],[10579,"text"," `"],[10597,"text","ok"],[10597,"text","`"],[10597,"text",").\n\n"],[10597,"text","**"],[10597,"text","Summary"],[10597,"text",":**"],[10618,"text"," The"],[10618,"text"," bug"],[10618,"text"," was"],[10618,"text"," in"],[10629,"text"," `"],[10629,"text","calc"],[10629,"text",".py"],[10642,"text","`"],[10659,"text","'"],[10659,"text","s"],[10659,"text"," `"],[10659,"text","add"],[10659,"text","`"],[10671,"text"," function"],[10671,"text",","],[10671,"text"," which"],[10671,"text"," returned"],[10685,"text"," `"],[10685,"text","a"],[10685,"text"," -"],[10685,"text"," b"],[10685,"text","`"],[10711,"text"," instead"],[10711,"text"," of"],[10711,"text"," `"],[10711,"text","a"],[10711,"text"," +"],[10711,"text"," b"],[10721,"text","`,"],[10722,"text"," so"],[10722,"text"," `"],[10722,"text","add"],[10736,"text","("],[10737,"text","2"],[10737,"text",","],[10737,"text"," "],[10737,"text","3"],[10737,"text",")`"],[10750,"text"," yielded"],[10750,"text"," `"],[10750,"text","-"],[10750,"text","1"],[10776,"text","`"],[10776,"text"," and"],[10785,"text"," tri"],[10798,"text","pped"],[10798,"text"," the"],[10798,"text"," assertion"],[10798,"text","."],[10798,"text"," I"],[10818,"text"," changed"],[10818,"text"," the"],[10832,"text"," operator"],[10845,"text"," to"],[10845,"text"," `"],[10845,"text","+"],[10864,"text","`,"],[10864,"text"," and"],[10864,"text"," `"],[10875,"text","test"],[10893,"text","_c"],[10893,"text","alc"],[10893,"text",".py"],[10893,"text","`"],[10893,"text"," now"],[10894,"text"," passes"],[10905,"text"," completely"],[10905,"text","."],[10908,"done"]]},"B":{"prompt":"Read cart.py and explain in about 120 words what it does, then list two edge cases it doesn't handle.","events":[[0,"prompt"],[1653,"text","I"],[1674,"text","'ll"],[1674,"text"," start"],[1698,"text"," by"],[1698,"text"," locating"],[1698,"text"," and"],[1698,"text"," reading"],[1698,"text"," cart"],[1716,"text",".py"],[1717,"text","."],[1748,"tool_args","","bash"],[1748,"tool_args","{\""],[1764,"tool_args","command"],[1764,"tool_args","\""],[1764,"tool_args",": \""],[1774,"tool_args","ls"],[1774,"tool_args"," -"],[1774,"tool_args","la"],[1774,"tool_args"," &&"],[1774,"tool_args"," echo"],[1774,"tool_args"," \\\""],[1791,"tool_args","---"],[1791,"tool_args","\\\""],[1791,"tool_args"," &&"],[1791,"tool_args"," find"],[1843,"tool_args"," ."],[1843,"tool_args"," -"],[1843,"tool_args","max"],[1843,"tool_args","depth"],[1843,"tool_args"," "],[1843,"tool_args","2"],[1844,"tool_args"," -"],[1844,"tool_args","name"],[1844,"tool_args"," \\\""],[1844,"tool_args","cart"],[1844,"tool_args",".py"],[1844,"tool_args","\\\""],[1844,"tool_args"," "],[1844,"tool_args","2"],[1844,"tool_args",">/"],[1844,"tool_args","dev"],[1844,"tool_args","/null"],[1848,"tool_args","\""],[1864,"tool_args",", \""],[1865,"tool_args","description"],[1865,"tool_args","\""],[1888,"tool_args",": \""],[1888,"tool_args","List"],[1888,"tool_args"," files"],[1888,"tool_args"," and"],[1888,"tool_args"," locate"],[2063,"tool_args"," cart"],[2064,"tool_args",".py"],[2064,"tool_args","\""],[2064,"tool_args","}"],[2069,"tool_start","bash","ls -la && echo \"---\" && find . -maxdepth 2 -name \"cart.py\" 2>/dev/null"],[2133,"tool_end","bash","total 12\ndrwxr-xr-x 2 dev root 4096 Nov 20 07:49 .\ndrwxr-xr-x 8 dev root 4096 Nov 20 07:50 ..\n-rw-r--r-- 1 dev root  224 Nov 20 07:49 cart.py\n---\n./cart.py",0],[3075,"tool_args","","read"],[3095,"tool_args","{\""],[3095,"tool_args","file"],[3095,"tool_args","_path"],[3095,"tool_args","\""],[3095,"tool_args",": \""],[3095,"tool_args","/"],[3129,"tool_args","tmp"],[3129,"tool_args","/cl"],[3129,"tool_args","aude"],[3129,"tool_args","-"],[3129,"tool_args","0"],[3129,"tool_args","/-"],[3129,"tool_args","home"],[3129,"tool_args","-user"],[3129,"tool_args","/c"],[3178,"tool_args","021"],[3178,"tool_args","62"],[3178,"tool_args","c"],[3178,"tool_args","9"],[3178,"tool_args","-"],[3178,"tool_args","143"],[3178,"tool_args","a"],[3178,"tool_args","-"],[3178,"tool_args","534"],[3178,"tool_args","3"],[3178,"tool_args","-b"],[3178,"tool_args","259"],[3178,"tool_args","-"],[3178,"tool_args","715"],[3178,"tool_args","f"],[3178,"tool_args","260"],[3178,"tool_args","0"],[3178,"tool_args","cb"],[3178,"tool_args","31"],[3178,"tool_args","/"],[3178,"tool_args","scr"],[3179,"tool_args","atch"],[3229,"tool_args","pad"],[3229,"tool_args","/d"],[3229,"tool_args","sh"],[3229,"tool_args","run"],[3229,"tool_args","/work"],[3229,"tool_args","B"],[3229,"tool_args","/c"],[3229,"tool_args","art"],[3229,"tool_args",".py"],[3229,"tool_args","\""],[3229,"tool_args","}"],[3266,"tool_start","read","~/demo/cart.py"],[3272,"tool_end","read","<path>~/demo/cart.py<\/path>\n<type>file<\/type>\n<content>\n1: import json, sys\n2: \n3: def load(path):\n4:     with open(path) as f:\n… 10 more lines",0],[4433,"reasoning","The"],[4719,"reasoning"," file"],[4734,"reasoning"," is"],[4734,"reasoning"," simple"],[4753,"reasoning","."],[4753,"reasoning"," The"],[4753,"reasoning"," user"],[4753,"reasoning"," asks"],[4769,"reasoning",":"],[4769,"reasoning"," explain"],[4769,"reasoning"," in"],[4781,"reasoning"," about"],[4781,"reasoning"," "],[4781,"reasoning","120"],[4781,"reasoning"," words"],[4781,"reasoning"," what"],[4801,"reasoning"," it"],[4801,"reasoning"," does"],[4801,"reasoning",","],[4801,"reasoning"," then"],[4801,"reasoning"," list"],[4801,"reasoning"," two"],[4813,"reasoning"," edge"],[4813,"reasoning"," cases"],[4813,"reasoning"," it"],[4813,"reasoning"," doesn"],[4813,"reasoning","'t"],[4813,"reasoning"," handle"],[4830,"reasoning",".\n\n"],[4830,"reasoning","This"],[4830,"reasoning"," is"],[4831,"reasoning"," a"],[4856,"reasoning"," read"],[4864,"reasoning","-and"],[4882,"reasoning","-ex"],[4883,"reasoning","plain"],[4883,"reasoning"," task"],[4883,"reasoning","."],[4883,"reasoning"," No"],[4883,"reasoning"," need"],[4889,"reasoning"," for"],[4889,"reasoning"," sub"],[4907,"reasoning","agents"],[4908,"reasoning","."],[4908,"reasoning"," Let"],[4923,"reasoning"," me"],[4924,"reasoning"," write"],[4924,"reasoning"," ~"],[4945,"reasoning","120"],[4945,"reasoning"," words"],[4946,"reasoning"," and"],[4956,"reasoning"," two"],[4956,"reasoning"," edge"],[4956,"reasoning"," cases"],[4974,"reasoning",".\n\n"],[4974,"reasoning","Note"],[4974,"reasoning",":"],[4974,"reasoning"," it"],[4990,"reasoning","'s"],[4990,"reasoning"," a"],[4991,"reasoning"," JSON"],[5002,"reasoning"," cart"],[5013,"reasoning"," loader"],[5013,"reasoning","."],[5027,"reasoning"," Edge"],[5042,"reasoning"," cases"],[5042,"reasoning",":"],[5042,"reasoning"," missing"],[5057,"reasoning","/m"],[5073,"reasoning","al"],[5073,"reasoning","formed"],[5073,"reasoning"," file"],[5089,"reasoning"," or"],[5104,"reasoning"," argv"],[5104,"reasoning",","],[5119,"reasoning"," non"],[5119,"reasoning","-n"],[5134,"reasoning","umeric"],[5134,"reasoning"," price"],[5150,"reasoning","/q"],[5150,"reasoning","ty"],[5150,"reasoning",","],[5150,"reasoning"," negative"],[5150,"reasoning"," q"],[5168,"reasoning","ty"],[5168,"reasoning",","],[5168,"reasoning"," zero"],[5168,"reasoning"," q"],[5185,"reasoning","ty"],[5186,"reasoning",","],[5186,"reasoning"," missing"],[5186,"reasoning"," keys"],[5203,"reasoning",","],[5203,"reasoning"," non"],[5203,"reasoning","-list"],[5212,"reasoning"," JSON"],[5264,"reasoning",","],[5264,"reasoning"," rounding"],[5264,"reasoning"," floats"],[5264,"reasoning"," ("],[5264,"reasoning","money"],[5274,"reasoning"," precision"],[5289,"reasoning","),"],[5290,"reasoning"," quantity"],[5308,"reasoning"," as"],[5308,"reasoning"," float"],[5324,"reasoning",","],[5325,"reasoning"," empty"],[5325,"reasoning"," list"],[5338,"reasoning"," returns"],[5338,"reasoning"," "],[5353,"reasoning","0"],[5353,"reasoning","."],[5370,"reasoning"," Two"],[5384,"reasoning"," edge"],[5384,"reasoning"," cases"],[5384,"reasoning",":"],[5384,"reasoning"," no"],[5398,"reasoning"," argv"],[5516,"reasoning","/file"],[5516,"reasoning"," missing"],[5517,"reasoning"," →"],[5517,"reasoning"," Index"],[5517,"reasoning","Error"],[5518,"reasoning",","],[5518,"reasoning"," and"],[5518,"reasoning"," mal"],[5518,"reasoning","formed"],[5518,"reasoning"," JSON"],[5519,"reasoning"," /"],[5519,"reasoning"," missing"],[5519,"reasoning"," keys"],[5520,"reasoning","."],[5520,"reasoning"," Or"],[5523,"reasoning"," currency"],[5538,"reasoning"," rounding"],[5554,"reasoning",".\n\n"],[5554,"reasoning","Let"],[5554,"reasoning"," me"],[5554,"reasoning"," aim"],[5569,"reasoning"," ~"],[5569,"reasoning","120"],[5569,"reasoning"," words"],[5569,"reasoning",".\n\n"],[5569,"reasoning","Answer"],[5569,"reasoning",":"],[5588,"reasoning"," explanation"],[5588,"reasoning"," plus"],[5601,"reasoning"," list"],[5601,"reasoning"," of"],[5614,"reasoning"," two"],[5615,"reasoning"," edge"],[5615,"reasoning"," cases"],[5615,"reasoning","."],[5632,"reasoning"," Should"],[5632,"reasoning"," I"],[5632,"reasoning"," mention"],[5651,"reasoning"," the"],[5651,"reasoning"," file"],[5666,"reasoning"," structure"],[5666,"reasoning","?"],[5676,"reasoning"," Keep"],[5677,"reasoning"," concise"],[5710,"reasoning",".\n\n"],[5710,"reasoning","Word"],[5713,"reasoning"," count"],[5714,"reasoning"," check"],[5724,"reasoning","."],[5724,"reasoning"," Let"],[5724,"reasoning"," me"],[5724,"reasoning"," draft"],[5756,"reasoning",":\n\n"],[5756,"reasoning","\""],[5756,"reasoning","cart"],[5756,"reasoning",".py"],[5756,"reasoning"," is"],[5757,"reasoning"," a"],[5757,"reasoning"," small"],[5757,"reasoning"," command"],[5780,"reasoning","-line"],[5780,"reasoning"," utility"],[5785,"reasoning"," for"],[5802,"reasoning"," totaling"],[5821,"reasoning"," a"],[5821,"reasoning"," shopping"],[5849,"reasoning"," cart"],[5849,"reasoning"," stored"],[5856,"reasoning"," as"],[5866,"reasoning"," JSON"],[5866,"reasoning","."],[5866,"reasoning"," Running"],[5880,"reasoning"," it"],[5881,"reasoning"," with"],[5897,"reasoning"," a"],[5897,"reasoning"," file"],[5919,"reasoning"," path"],[5919,"reasoning"," loads"],[5929,"reasoning"," that"],[5945,"reasoning"," file"],[5961,"reasoning"," via"],[5961,"reasoning"," json"],[5961,"reasoning",".load"],[5977,"reasoning"," and"],[5977,"reasoning"," passes"],[5995,"reasoning"," the"],[5995,"reasoning"," resulting"],[6011,"reasoning"," list"],[6011,"reasoning"," of"],[6011,"reasoning"," item"],[6032,"reasoning"," dictionaries"],[6032,"reasoning"," to"],[6032,"reasoning"," total"],[6047,"reasoning","()."],[6060,"reasoning"," That"],[6079,"reasoning"," function"],[6079,"reasoning"," multipl"],[6079,"reasoning","ies"],[6079,"reasoning"," each"],[6092,"reasoning"," item"],[6092,"reasoning","'s"],[6092,"reasoning"," price"],[6092,"reasoning"," by"],[6108,"reasoning"," its"],[6109,"reasoning"," q"],[6109,"reasoning","ty"],[6109,"reasoning"," and"],[6124,"reasoning"," sums"],[6124,"reasoning"," the"],[6140,"reasoning"," products"],[6140,"reasoning"," with"],[6141,"reasoning"," Python"],[6156,"reasoning","'s"],[6157,"reasoning"," built"],[6180,"reasoning","-in"],[6180,"reasoning"," sum"],[6180,"reasoning",","],[6180,"reasoning"," then"],[6193,"reasoning"," main"],[6204,"reasoning"," prints"],[6204,"reasoning"," the"],[6204,"reasoning"," result"],[6218,"reasoning","."],[6218,"reasoning"," It"],[6233,"reasoning"," assumes"],[6249,"reasoning"," the"],[6271,"reasoning"," file"],[6271,"reasoning"," is"],[6280,"reasoning"," JSON"],[6280,"reasoning"," whose"],[6295,"reasoning"," top"],[6295,"reasoning","-level"],[6312,"reasoning"," value"],[6312,"reasoning"," is"],[6312,"reasoning"," a"],[6312,"reasoning"," list"],[6327,"reasoning"," of"],[6327,"reasoning"," objects"],[6342,"reasoning"," with"],[6356,"reasoning"," numeric"],[6375,"reasoning"," price"],[6391,"reasoning"," and"],[6391,"reasoning"," q"],[6391,"reasoning","ty"],[6391,"reasoning"," keys"],[6391,"reasoning",","],[6391,"reasoning"," and"],[6408,"reasoning"," that"],[6418,"reasoning"," argv"],[6437,"reasoning","["],[6437,"reasoning","1"],[6437,"reasoning","]"],[6437,"reasoning"," names"],[6450,"reasoning"," a"],[6450,"reasoning"," readable"],[6472,"reasoning"," file"],[6472,"reasoning","."],[6472,"reasoning"," There"],[6485,"reasoning"," is"],[6485,"reasoning"," no"],[6485,"reasoning"," validation"],[6497,"reasoning",","],[6497,"reasoning"," formatting"],[6511,"reasoning",","],[6511,"reasoning"," or"],[6511,"reasoning"," rounding"],[6525,"reasoning"," —"],[6542,"reasoning"," it"],[6542,"reasoning"," just"],[6558,"reasoning"," produces"],[6573,"reasoning"," one"],[6573,"reasoning"," number"],[6588,"reasoning"," per"],[6605,"reasoning"," invocation"],[6619,"reasoning",","],[6634,"reasoning"," serving"],[6649,"reasoning"," as"],[6649,"reasoning"," a"],[6649,"reasoning"," minimal"],[6664,"reasoning"," example"],[6681,"reasoning"," of"],[6681,"reasoning"," separating"],[6696,"reasoning"," data"],[6696,"reasoning"," loading"],[6713,"reasoning"," from"],[6713,"reasoning"," a"],[6731,"reasoning"," pure"],[6751,"reasoning"," calculation"],[6751,"reasoning"," function"],[6766,"reasoning",".\"\n\n"],[6767,"reasoning","That"],[6767,"reasoning","'s"],[6767,"reasoning"," about"],[6780,"reasoning"," "],[6780,"reasoning","110"],[6780,"reasoning","."],[6791,"reasoning"," Good"],[6792,"reasoning",".\n\n"],[6792,"reasoning","Edge"],[6831,"reasoning"," cases"],[6831,"reasoning",":\n"],[6831,"reasoning","1"],[6832,"reasoning","."],[6832,"reasoning"," Missing"],[6832,"reasoning","/"],[6832,"reasoning","extra"],[6834,"reasoning"," CLI"],[6852,"reasoning"," args"],[6868,"reasoning"," or"],[6869,"reasoning"," un"],[6894,"reasoning","read"],[6894,"reasoning","able"],[6894,"reasoning"," path"],[6897,"reasoning"," —"],[6898,"reasoning"," sys"],[6914,"reasoning",".argv"],[6914,"reasoning","["],[6914,"reasoning","1"],[6914,"reasoning","]"],[6914,"reasoning"," raises"],[6934,"reasoning"," Index"],[6934,"reasoning","Error"],[6934,"reasoning",","],[6934,"reasoning"," open"],[6947,"reasoning"," raises"],[6964,"reasoning"," File"],[6964,"reasoning","NotFound"],[6964,"reasoning","Error"],[6964,"reasoning",","],[6964,"reasoning"," JSON"],[6978,"reasoning"," decode"],[6978,"reasoning"," error"],[6997,"reasoning"," un"],[7011,"reasoning","ca"],[7011,"reasoning","ught"],[7011,"reasoning",".\n"],[7012,"reasoning","2"],[7012,"reasoning","."],[7012,"reasoning"," Bad"],[7024,"reasoning"," data"],[7048,"reasoning",":"],[7048,"reasoning"," missing"],[7048,"reasoning"," price"],[7056,"reasoning","/q"],[7056,"reasoning","ty"],[7056,"reasoning"," keys"],[7056,"reasoning"," ("],[7074,"reasoning","Key"],[7074,"reasoning","Error"],[7074,"reasoning","),"],[7074,"reasoning"," non"],[7074,"reasoning","-n"],[7086,"reasoning","umeric"],[7086,"reasoning"," or"],[7102,"reasoning"," string"],[7102,"reasoning"," values"],[7102,"reasoning"," ("],[7124,"reasoning","Type"],[7124,"reasoning","Error"],[7124,"reasoning","),"],[7124,"reasoning"," negative"],[7132,"reasoning","/"],[7151,"reasoning","zero"],[7151,"reasoning"," q"],[7151,"reasoning","ty"],[7151,"reasoning"," silently"],[7164,"reasoning"," accepted"],[7164,"reasoning",";"],[7183,"reasoning"," or"],[7183,"reasoning"," float"],[7207,"reasoning"," prices"],[7212,"reasoning"," cause"],[7229,"reasoning"," rounding"],[7284,"reasoning"," errors"],[7285,"reasoning"," ("],[7285,"reasoning","no"],[7285,"reasoning"," Decimal"],[7290,"reasoning",")."],[7290,"reasoning"," Empty"],[7304,"reasoning"," list"],[7327,"reasoning"," →"],[7327,"reasoning"," "],[7343,"reasoning","0"],[7343,"reasoning",","],[7343,"reasoning"," which"],[7358,"reasoning"," may"],[7358,"reasoning"," be"],[7358,"reasoning"," fine"],[7367,"reasoning",".\n\n"],[7367,"reasoning","Pick"],[7367,"reasoning"," two"],[7386,"reasoning"," clearly"],[7399,"reasoning"," and"],[7415,"reasoning"," explain"],[7431,"reasoning"," briefly"],[7446,"reasoning","."],[7446,"text","Read"],[7459,"text"," it"],[7476,"text","."],[7476,"text"," Here"],[7476,"text","'s"],[7492,"text"," the"],[7492,"text"," explanation"],[7492,"text"," and"],[7507,"text"," the"],[7507,"text"," gaps"],[7530,"text",".\n\n"],[7530,"text","**"],[7530,"text","What"],[7538,"text"," it"],[7539,"text"," does"],[7539,"text","**\n\n"],[7539,"text","`"],[7553,"text","cart"],[7553,"text",".py"],[7553,"text","`"],[7553,"text"," is"],[7553,"text"," a"],[7553,"text"," small"],[7568,"text"," command"],[7568,"text","-line"],[7568,"text"," utility"],[7568,"text"," for"],[7584,"text"," totaling"],[7584,"text"," a"],[7584,"text"," shopping"],[7584,"text"," cart"],[7601,"text"," stored"],[7601,"text"," as"],[7601,"text"," JSON"],[7601,"text","."],[7601,"text"," Run"],[7614,"text"," with"],[7631,"text"," a"],[7631,"text"," file"],[7631,"text"," path"],[7631,"text",","],[7631,"text"," it"],[7631,"text"," calls"],[7644,"text"," `"],[7644,"text","load"],[7644,"text","()"],[7665,"text","`,"],[7665,"text"," which"],[7665,"text"," opens"],[7680,"text"," the"],[7680,"text"," file"],[7680,"text"," and"],[7680,"text"," par"],[7696,"text","ses"],[7696,"text"," it"],[7696,"text"," with"],[7697,"text"," `"],[7697,"text","json"],[7697,"text",".load"],[7711,"text","`,"],[7736,"text"," then"],[7737,"text"," passes"],[7737,"text"," the"],[7753,"text"," resulting"],[7753,"text"," list"],[7753,"text"," of"],[7754,"text"," item"],[7768,"text"," dictionaries"],[7768,"text"," to"],[7768,"text"," `"],[7768,"text","total"],[7768,"text","()"],[7789,"text","`."],[7789,"text"," That"],[7789,"text"," function"],[7789,"text"," multipl"],[7800,"text","ies"],[7801,"text"," each"],[7801,"text"," item"],[7801,"text","'s"],[7801,"text"," `"],[7801,"text","price"],[7811,"text","`"],[7811,"text"," by"],[7811,"text"," its"],[7811,"text"," `"],[7811,"text","q"],[7811,"text","ty"],[7834,"text","`"],[7834,"text"," and"],[7834,"text"," sums"],[7834,"text"," the"],[7845,"text"," products"],[7845,"text"," using"],[7858,"text"," Python"],[7858,"text","'s"],[7858,"text"," built"],[7875,"text","-in"],[7875,"text"," `"],[7875,"text","sum"],[7875,"text","()`"],[7889,"text",";"],[7889,"text"," `"],[7889,"text","main"],[7889,"text","`"],[7903,"text"," prints"],[7903,"text"," the"],[7903,"text"," resulting"],[7919,"text"," number"],[7919,"text","."],[7919,"text"," It"],[7937,"text"," silently"],[7990,"text"," assumes"],[7990,"text"," the"],[7990,"text"," file"],[7990,"text"," exists"],[7990,"text",","],[7990,"text"," contains"],[7996,"text"," valid"],[7996,"text"," JSON"],[7996,"text",","],[7996,"text"," and"],[7996,"text"," that"],[8012,"text"," the"],[8012,"text"," top"],[8012,"text","-level"],[8012,"text"," value"],[8012,"text"," is"],[8012,"text"," a"],[8028,"text"," list"],[8028,"text"," of"],[8028,"text"," objects"],[8028,"text"," with"],[8028,"text"," numeric"],[8042,"text"," `"],[8042,"text","price"],[8042,"text","`"],[8042,"text"," and"],[8042,"text"," `"],[8042,"text","q"],[8057,"text","ty"],[8057,"text","`"],[8057,"text"," keys"],[8057,"text","."],[8057,"text"," There"],[8075,"text"," is"],[8075,"text"," no"],[8075,"text"," validation"],[8075,"text",","],[8076,"text"," currency"],[8099,"text"," rounding"],[8112,"text",","],[8112,"text"," or"],[8113,"text"," user"],[8118,"text","-facing"],[8118,"text"," error"],[8136,"text"," handling"],[8136,"text","."],[8136,"text"," Struct"],[8150,"text","urally"],[8150,"text"," it"],[8150,"text"," clean"],[8166,"text","ly"],[8167,"text"," separates"],[8167,"text"," I"],[8181,"text","/O"],[8181,"text"," (`"],[8195,"text","load"],[8195,"text","`)"],[8195,"text"," from"],[8195,"text"," a"],[8214,"text"," pure"],[8214,"text"," calculation"],[8227,"text"," (`"],[8227,"text","total"],[8227,"text","`"],[8227,"text","),"],[8227,"text"," making"],[8243,"text"," the"],[8282,"text"," latter"],[8282,"text"," easy"],[8282,"text"," to"],[8282,"text"," test"],[8289,"text"," in"],[8309,"text"," isolation"],[8309,"text",".\n\n"],[8309,"text","**"],[8309,"text","Two"],[8322,"text"," edge"],[8322,"text"," cases"],[8322,"text"," it"],[8322,"text"," doesn"],[8322,"text","'t"],[8322,"text"," handle"],[8338,"text","**\n\n"],[8338,"text","1"],[8338,"text","."],[8338,"text"," **"],[8338,"text","Missing"],[8364,"text","/b"],[8375,"text","ad"],[8386,"text"," arguments"],[8386,"text"," or"],[8386,"text"," an"],[8416,"text"," un"],[8416,"text","read"],[8416,"text","able"],[8416,"text"," or"],[8425,"text"," mal"],[8425,"text","formed"],[8425,"text"," file"],[8439,"text",".**"],[8439,"text"," `"],[8439,"text","sys"],[8439,"text",".argv"],[8439,"text","["],[8455,"text","1"],[8455,"text","]"],[8455,"text","`"],[8455,"text"," raises"],[8477,"text"," `"],[8477,"text","Index"],[8477,"text","Error"],[8477,"text","`"],[8477,"text"," when"],[8486,"text"," no"],[8501,"text"," path"],[8521,"text"," is"],[8521,"text"," given"],[8539,"text",","],[8540,"text"," and"],[8540,"text"," a"],[8540,"text"," nonex"],[8556,"text","istent"],[8556,"text"," path"],[8556,"text",","],[8557,"text"," permission"],[8572,"text"," error"],[8572,"text",","],[8572,"text"," or"],[8572,"text"," invalid"],[8594,"text"," JSON"],[8595,"text"," propag"],[8608,"text","ates"],[8608,"text"," as"],[8608,"text"," an"],[8608,"text"," un"],[8608,"text","ca"],[8625,"text","ught"],[8625,"text"," `"],[8625,"text","File"],[8625,"text","NotFound"],[8625,"text","Error"],[8625,"text","`"],[8639,"text","/"],[8639,"text","`"],[8639,"text","JSON"],[8639,"text","Dec"],[8639,"text","ode"],[8639,"text","Error"],[8656,"text","`"],[8656,"text"," —"],[8672,"text"," a"],[8672,"text"," trace"],[8672,"text","back"],[8686,"text"," instead"],[8686,"text"," of"],[8687,"text"," a"],[8687,"text"," helpful"],[8702,"text"," message"],[8703,"text",".\n\n"],[8703,"text","2"],[8703,"text","."],[8703,"text"," **"],[8703,"text","Mal"],[8718,"text","formed"],[8719,"text"," or"],[8719,"text"," semantically"],[8736,"text"," invalid"],[8748,"text"," item"],[8748,"text"," data"],[8748,"text",".**"],[8748,"text"," A"],[8766,"text"," missing"],[8766,"text"," `"],[8766,"text","price"],[8780,"text","`"],[8780,"text"," or"],[8780,"text"," `"],[8780,"text","q"],[8780,"text","ty"],[8780,"text","`"],[8794,"text"," key"],[8794,"text"," raises"],[8794,"text"," `"],[8794,"text","Key"],[8794,"text","Error"],[8794,"text","`,"],[8815,"text"," a"],[8815,"text"," string"],[8827,"text"," or"],[8828,"text"," `"],[8840,"text","null"],[8841,"text","`"],[8841,"text"," value"],[8841,"text"," raises"],[8841,"text"," `"],[8867,"text","Type"],[8867,"text","Error"],[8867,"text","`,"],[8867,"text"," and"],[8867,"text"," negative"],[8867,"text"," or"],[8874,"text"," zero"],[8874,"text"," quantities"],[8874,"text"," are"],[8874,"text"," accepted"],[8890,"text"," without"],[8904,"text"," complaint"],[8924,"text",","],[8924,"text"," silently"],[8924,"text"," producing"],[8940,"text"," a"],[8956,"text"," nons"],[8975,"text","ens"],[8975,"text","ical"],[8975,"text"," total"],[8975,"text","."],[8975,"text"," Float"],[8993,"text"," prices"],[8994,"text"," are"],[8994,"text"," also"],[9002,"text"," summed"],[9002,"text"," without"],[9002,"text"," `"],[9020,"text","Decimal"],[9020,"text","`"],[9033,"text"," rounding"],[9034,"text",","],[9034,"text"," so"],[9048,"text"," totals"],[9104,"text"," can"],[9104,"text"," be"],[9104,"text"," off"],[9104,"text"," by"],[9105,"text"," fractions"],[9105,"text"," of"],[9105,"text"," a"],[9105,"text"," cent"],[9105,"text","."],[9108,"done"]]}};
+
+/* ---------------------------------------------------------------------------
+ * Engine: a line-for-line port of src/{engine,pack,synth}.rs.
+ * Self-contained so it can be stringified into an AudioWorklet.
+ * ------------------------------------------------------------------------- */
+function engineFactory() {
+  var TICK = 64, MAX_VOICES = 32, IDLE_RESET = 0.25, MAX_BACKLOG = 0.3;
+  var KIND_INDEX = { text: 0, reasoning: 1, tool_args: 2 };
+  var PENTA = [0, 2, 4, 7, 9, 12, 14, 16];
+  var ROOTS = [3, -2, 5, 0, -4], PANS = [0, -0.55, 0.55, -0.3, 0.3];
+  function noteHz(s) { return 440 * Math.pow(2, s / 12); }
+  function xs(o) { var v = o.s; v ^= v << 13; v ^= v >>> 17; v ^= v << 5; v >>>= 0; o.s = v; return (v >>> 8) / 16777216; }
+  function tone(wave, freq, dur, gain, extra) {
+    var s = { wave: wave, duty: 0.5, freq: freq, freqEnd: freq, attack: 0.002, decay: dur * 0.4, dur: dur, gain: gain, noise: 0, lowpass: 0, pan: 0, delay: 0 };
+    if (extra) for (var k in extra) s[k] = extra[k];
+    return s;
+  }
+  function pacing(pack, kind) {
+    if (pack === 'mech' && kind === 'text') return { cpp: 4, hz: 24, jitter: 0.25 };
+    if (kind === 'text') return { cpp: 5, hz: 20, jitter: 0.25 };
+    if (kind === 'reasoning') return { cpp: 12, hz: 7, jitter: 0.25 };
+    if (kind === 'tool_args') return { cpp: 6, hz: 16, jitter: 0.25 };
+    return { cpp: 1, hz: 1, jitter: 0.25 };
+  }
+  function streamPop(pack, kind, v, sel, r) {
+    var step = PENTA[sel % 8];
+    if (pack === 'blip' && kind === 'text') {
+      var f = noteHz(v.root + step);
+      return tone('pulse', f, 0.045, 0.20, { duty: 0.25, freqEnd: f * 0.97, decay: 0.018, lowpass: 3800, pan: v.pan });
+    }
+    if (pack === 'chip' && kind === 'text') return tone('pulse', noteHz(v.root + step), 0.035, 0.12, { decay: 0.03, pan: v.pan });
+    if (pack === 'mech' && (kind === 'text' || kind === 'tool_args')) {
+      var heavy = kind === 'tool_args';
+      return tone('tri', (heavy ? 180 : 260) * (0.9 + 0.2 * r), 0.035, (heavy ? 0.30 : 0.22) * (0.8 + 0.4 * r),
+        { noise: 0.9, attack: 0.0005, decay: heavy ? 0.012 : 0.008, lowpass: 5000 + 3000 * r, pan: v.pan + (r - 0.5) * 0.2 });
+    }
+    if (kind === 'reasoning') return tone('sine', noteHz(v.root - 12 + step), 0.11, 0.16, { attack: 0.006, decay: 0.05, pan: v.pan });
+    return tone('tri', noteHz(v.root + 12 + step), 0.03, 0.12, { noise: 0.35, decay: 0.01, lowpass: 6000, pan: v.pan });
+  }
+  function cue(pack, kind, v) {
+    var chip = pack === 'chip';
+    function t(semi, dur, gain, delay) {
+      return tone(chip ? 'pulse' : 'tri', noteHz(v.root + semi), dur, chip ? gain * 0.6 : gain, { delay: delay, pan: v.pan, decay: dur * 0.45 });
+    }
+    switch (kind) {
+      case 'prompt': return [tone('sine', noteHz(v.root - 5), 0.09, 0.25, { freqEnd: noteHz(v.root + 7), pan: v.pan, attack: 0.01, decay: 0.05 })];
+      case 'tool_start': return [
+        tone('sine', 160, 0.09, 0.45, { freqEnd: 70, decay: 0.04, pan: v.pan }),
+        tone('sine', 1, 0.02, 0.25, { noise: 1, decay: 0.006, lowpass: 4000, pan: v.pan })];
+      case 'tool_end': return [t(7, 0.06, 0.22, 0), t(12, 0.09, 0.22, 0.055)];
+      case 'tool_error': case 'error': return [
+        tone('pulse', noteHz(v.root - 12), 0.26, 0.16, { lowpass: 2200, decay: 0.12, pan: v.pan }),
+        tone('pulse', noteHz(v.root - 6) * 1.01, 0.26, 0.14, { lowpass: 2200, decay: 0.12, pan: v.pan })];
+      case 'approval': {
+        var out = [];
+        [0, 0.2].forEach(function (d) {
+          out.push(tone('sine', noteHz(v.root + 24), 0.6, 0.30, { delay: d, decay: 0.25 }));
+          out.push(tone('sine', noteHz(v.root + 24) * 2.76, 0.4, 0.10, { delay: d, decay: 0.12 }));
+        });
+        return out;
+      }
+      case 'done': return [0, 4, 7, 12].map(function (s, i) { return t(s, i === 3 ? 0.35 : 0.12, 0.2, i * 0.07); });
+    }
+    return [];
+  }
+  function Voice(s, sr, seed) {
+    this.s = s; this.sr = sr; this.phase = 0; this.n = 0;
+    this.dn = Math.floor(s.delay * sr); this.durn = Math.floor(s.dur * sr);
+    this.lp = 0; this.lpa = s.lowpass > 0 ? 1 - Math.exp(-2 * Math.PI * s.lowpass / sr) : 1;
+    this.ns = (seed | 1) >>> 0;
+    var a = (Math.max(-1, Math.min(1, s.pan)) + 1) * Math.PI / 4;
+    this.gl = Math.cos(a); this.gr = Math.sin(a);
+  }
+  Voice.prototype.done = function () { return this.n >= this.dn + this.durn; };
+  Voice.prototype.add = function (L, R, off, len) {
+    var s = this.s, end = this.dn + this.durn;
+    for (var i = off; i < off + len; i++) {
+      if (this.n >= end) break;
+      var n = this.n++;
+      if (n < this.dn) continue;
+      var t = (n - this.dn) / this.sr;
+      var f = s.freq + (s.freqEnd - s.freq) * (t / s.dur);
+      this.phase = (this.phase + f / this.sr) % 1;
+      var p = this.phase, x;
+      if (s.wave === 'pulse') x = (p < s.duty ? 1 : -1) - (2 * s.duty - 1);
+      else if (s.wave === 'tri') x = 4 * Math.abs(p - 0.5) - 1;
+      else x = Math.sin(2 * Math.PI * p);
+      if (s.noise > 0) {
+        var v = this.ns; v ^= v << 13; v ^= v >>> 17; v ^= v << 5; v >>>= 0; this.ns = v;
+        x = x * (1 - s.noise) + (v / 4294967295 * 2 - 1) * s.noise;
+      }
+      this.lp += this.lpa * (x - this.lp);
+      var env = t < s.attack ? t / s.attack : Math.exp(-(t - s.attack) / Math.max(s.decay, 1e-4));
+      var tail = Math.max(0, Math.min(1, (s.dur - t) / 0.003));
+      var y = this.lp * env * tail * s.gain;
+      L[i] += y * this.gl; R[i] += y * this.gr;
+    }
+  };
+  function Engine(sr, pack) {
+    this.sr = sr; this.pack = pack; this.agents = new Map(); this.voices = []; this.now = 0;
+    this.rng = { s: 0x9e3779b9 }; this.master = 0.8; this.muted = false; this.pops = []; this.dc = [[0, 0], [0, 0]];
+  }
+  Engine.prototype.agent = function (name) {
+    var a = this.agents.get(name);
+    if (!a) { var n = this.agents.size; a = { voice: { root: ROOTS[n % 5], pan: PANS[n % 5] }, streams: new Map() }; this.agents.set(name, a); }
+    return a;
+  };
+  Engine.prototype.spawn = function (spec) {
+    if (this.voices.length >= MAX_VOICES) this.voices.shift();
+    this.voices.push(new Voice(spec, this.sr, Math.floor(xs(this.rng) * 4294967295)));
+  };
+  Engine.prototype.push = function (e) {
+    if (this.muted) return;
+    var now = this.now, sr = this.sr;
+    if (e.kind in KIND_INDEX) {
+      var p = pacing(this.pack, e.kind);
+      var seed = (0x12345678 ^ Math.imul(KIND_INDEX[e.kind], 0x85ebca6b | 0) ^ this.agents.size) >>> 0;
+      var a = this.agent(e.agent), st = a.streams.get(e.kind);
+      if (!st) { st = { credit: 0, last: 0, next: 0, count: 0, h: 0, rng: { s: (seed | 1) >>> 0 } }; a.streams.set(e.kind, st); }
+      var idle = (now - st.last) / sr > IDLE_RESET;
+      if (idle || st.count === 0) st.credit = Math.max(st.credit, 1);
+      st.credit = Math.min(st.credit + e.chars / p.cpp, 1 + p.hz * MAX_BACKLOG);
+      st.last = now; st.h = e.h;
+    } else {
+      var v = this.agent(e.agent).voice, specs = cue(this.pack, e.kind, v);
+      for (var i = 0; i < specs.length; i++) this.spawn(specs[i]);
+      if (specs.length) this.pops.push([e.agent, 'cue']);
+    }
+  };
+  Engine.prototype.schedule = function () {
+    var now = this.now, sr = this.sr, specs = [], self = this;
+    this.agents.forEach(function (a, name) {
+      a.streams.forEach(function (s, kind) {
+        if ((now - s.last) / sr > IDLE_RESET) { s.credit = 0; return; }
+        if (s.credit < 1 || now < s.next) return;
+        s.credit -= 1; s.count++;
+        var p = pacing(self.pack, kind), j = xs(s.rng);
+        s.next = now + Math.floor(sr / p.hz * (1 + p.jitter * (2 * j - 1)));
+        var sel = (s.h ^ (Math.imul(s.count, 2654435761 | 0) >>> 7)) >>> 0;
+        specs.push(streamPop(self.pack, kind, a.voice, sel, xs(s.rng)));
+        self.pops.push([name, kind]);
+      });
+    });
+    for (var i = 0; i < specs.length; i++) this.spawn(specs[i]);
+  };
+  Engine.prototype.render = function (L, R) {
+    var n = L.length; L.fill(0); R.fill(0);
+    if (this.muted) {
+      this.voices = [];
+      this.agents.forEach(function (a) { a.streams.forEach(function (s) { s.credit = 0; }); });
+      this.now += n; return;
+    }
+    for (var off = 0; off < n; off += TICK) {
+      var len = Math.min(TICK, n - off);
+      this.schedule();
+      for (var k = 0; k < this.voices.length; k++) this.voices[k].add(L, R, off, len);
+      this.voices = this.voices.filter(function (v) { return !v.done(); });
+      for (var c = 0; c < 2; c++) {
+        var buf = c ? R : L, d = this.dc[c];
+        for (var i = off; i < off + len; i++) {
+          var x = buf[i], y = x - d[0] + 0.998 * d[1];
+          d[0] = x; d[1] = y; buf[i] = Math.tanh(y * this.master);
+        }
+      }
+      this.now += len;
+    }
+  };
+  Engine.prototype.takePops = function () { var p = this.pops; this.pops = []; return p; };
+  return { Engine: Engine };
+}
+
+const WORKLET_SRC =
+  'const { Engine } = (' + engineFactory.toString() + ')();\n' +
+  'class TokenPop extends AudioWorkletProcessor {\n' +
+  '  constructor() { super(); this.e = new Engine(sampleRate, "blip");\n' +
+  '    this.port.onmessage = (m) => { const d = m.data;\n' +
+  '      if (d.t === "ev") this.e.push(d.ev); else if (d.t === "pack") this.e.pack = d.v; else if (d.t === "mute") this.e.muted = d.v; }; }\n' +
+  '  process(_in, outs) { const o = outs[0]; const L = o[0]; const R = o[1] || new Float32Array(L.length);\n' +
+  '    this.e.render(L, R); const p = this.e.takePops(); if (p.length) this.port.postMessage(p); return true; }\n' +
+  '}\n' +
+  'registerProcessor("tokenpop", TokenPop);\n';
+
+/* ---------------------------------------------------------------------------
+ * Audio output: AudioWorklet, falling back to ScriptProcessor.
+ * ------------------------------------------------------------------------- */
+const state = { pack: 'blip', thinkSound: true, volume: 0.55, scn: 'A', running: false };
+
+const Audio = {
+  ctx: null, node: null, gain: null, queue: [], ready: null,
+  init() {
+    if (this.ready) { if (this.ctx.state !== 'running') this.ctx.resume(); return this.ready; }
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const ctx = new AC({ latencyHint: 'interactive' });
+    this.ctx = ctx;
+    this.gain = ctx.createGain();
+    this.gain.gain.value = volToGain(state.volume);
+    this.gain.connect(ctx.destination);
+    this.ready = (async () => {
+      try {
+        const url = URL.createObjectURL(new Blob([WORKLET_SRC], { type: 'application/javascript' }));
+        await ctx.audioWorklet.addModule(url);
+        const node = new AudioWorkletNode(ctx, 'tokenpop', { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+        node.port.onmessage = (m) => onPops(m.data);
+        node.connect(this.gain);
+        this.node = node;
+        document.getElementById('audio-mode').textContent = '';
+      } catch (err) {
+        const { Engine } = engineFactory();
+        const eng = new Engine(ctx.sampleRate, state.pack);
+        const sp = ctx.createScriptProcessor(1024, 1, 2);
+        sp.onaudioprocess = (ev) => {
+          const q = this.queue; this.queue = [];
+          for (const m of q) applyMsg(eng, m);
+          eng.render(ev.outputBuffer.getChannelData(0), ev.outputBuffer.getChannelData(1));
+          const p = eng.takePops(); if (p.length) onPops(p);
+        };
+        sp.connect(this.gain);
+      }
+      this.post({ t: 'pack', v: state.pack });
+      if (ctx.state !== 'running') await ctx.resume();
+    })();
+    return this.ready;
+  },
+  post(m) { if (this.node) this.node.port.postMessage(m); else if (this.ctx) this.queue.push(m); },
+  setVolume(v) { if (this.gain) this.gain.gain.setTargetAtTime(volToGain(v), this.ctx.currentTime, 0.02); },
+};
+function applyMsg(eng, d) {
+  if (d.t === 'ev') eng.push(d.ev); else if (d.t === 'pack') eng.pack = d.v; else if (d.t === 'mute') eng.muted = d.v;
+}
+// Slider 0..1 -> gain 0..~3.6 (default ~+6 dB over the daemon's quiet background level).
+function volToGain(v) { return v === 0 ? 0 : Math.pow(v, 1.6) * 3.6; }
+
+function hash8(s) {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return (h >>> 0) & 0xff;
+}
+
+/* ---------------------------------------------------------------------------
+ * Transcript panes
+ * ------------------------------------------------------------------------- */
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function md(raw) {
+  return esc(raw)
+    .replace(/`([^`\n]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+}
+function cleanOut(name, out) {
+  if (name === 'read') {
+    out = out.split('\n').filter((l) => !/^<\/?(path|type|content)>/.test(l) && !/^<path>/.test(l)).join('\n');
+  }
+  return out.trim();
+}
+const TOOL_LABEL = { bash: 'Bash', read: 'Read', glob: 'Glob', edit: 'Edit', write: 'Write', grep: 'Grep' };
+
+class Pane {
+  constructor(id, label, chan, sess) {
+    this.id = id; this.sess = sess; this.chunks = 0; this.pops = 0;
+    this.chunkMarks = []; this.popMarks = [];
+    const el = document.createElement('section');
+    el.className = 'pane';
+    el.setAttribute('aria-label', label);
+    el.innerHTML =
+      '<div class="pane-head"><div class="pane-title"><b>' + label + '</b><span class="cwd">dsh · ~/demo</span>' +
+      (chan ? '<span class="chan" title="Stereo position">' + chan + '</span>' : '') + '</div>' +
+      '<span class="state" data-s="idle"><i></i><span>idle</span></span></div>' +
+      '<div class="log" aria-live="off"></div>' +
+      '<div class="lane"><div class="lane-labels"><span>chunks in</span><span>pops out</span></div><canvas></canvas>' +
+      '<div class="lane-foot"><span class="lf-l">0 chunks → 0 pops</span><span class="lf-r">0.0s</span></div></div>';
+    this.el = el;
+    this.log = el.querySelector('.log');
+    this.stateEl = el.querySelector('.state');
+    this.canvas = el.querySelector('canvas');
+    this.lfL = el.querySelector('.lf-l');
+    this.lfR = el.querySelector('.lf-r');
+    this.caret = document.createElement('span');
+    this.caret.className = 'caret';
+    this.welcome();
+  }
+  welcome() {
+    this.log.innerHTML =
+      '<div class="welcome"><div><span class="k">DeepSeek Harness</span> · recorded session</div>' +
+      '<div>Task: ' + esc(this.sess.prompt) + '</div>' +
+      '<div>Press <span class="k">Send</span> to replay it with sound.</div></div>';
+    this.setState('idle', 'idle');
+  }
+  setState(s, text) { this.stateEl.dataset.s = s; this.stateEl.lastChild.textContent = text; }
+  reset() {
+    this.log.innerHTML = '';
+    this.cur = null; this.tools = []; this.chunks = 0; this.pops = 0; this.chunkMarks = []; this.popMarks = [];
+    const u = document.createElement('div'); u.className = 'user'; u.textContent = this.sess.prompt;
+    this.log.appendChild(u);
+    this.setState('thinking', 'starting');
+  }
+  start(delay) { this.reset(); this.t0 = performance.now() + delay; this.i = 0; this.running = true; this.elapsed = 0; }
+  stop() { this.running = false; this.caret.remove(); this.closeCur(); }
+  tick(now) {
+    if (!this.running) return;
+    const el = now - this.t0;
+    if (el < 0) return;
+    this.elapsed = el;
+    const ev = this.sess.events;
+    const stick = this.log.scrollHeight - this.log.scrollTop - this.log.clientHeight < 40;
+    while (this.i < ev.length && ev[this.i][0] <= el) this.dispatch(ev[this.i++]);
+    if (this.i >= ev.length) this.finish();
+    if (stick) this.log.scrollTop = this.log.scrollHeight;
+  }
+  finish() {
+    this.running = false; this.caret.remove(); this.closeCur();
+    this.setState('done', 'done');
+    paneFinished();
+  }
+  sound(kind, extra) { Audio.post({ t: 'ev', ev: Object.assign({ agent: this.id, kind: kind, chars: 0, h: 0 }, extra || {}) }); }
+  dispatch(row) {
+    const k = row[1];
+    if (k === 'text' || k === 'reasoning' || k === 'tool_args') {
+      const s = row[2] || '';
+      if (k === 'tool_args') this.toolArgs(s, row[3]); else this.stream(k, s);
+      if (s) {
+        this.chunks++;
+        this.chunkMarks.push([performance.now(), k]);
+        if (!(k === 'reasoning' && !state.thinkSound)) this.sound(k, { chars: s.length, h: hash8(s) });
+      }
+    } else if (k === 'tool_start') { this.toolStart(row[2], row[3]); this.sound('tool_start'); }
+    else if (k === 'tool_end') { this.toolEnd(row[2], row[3], row[4]); this.sound(row[4] ? 'tool_error' : 'tool_end'); }
+    else if (k === 'prompt') this.sound('prompt');
+    else if (k === 'done') this.sound('done');
+  }
+  closeCur() {
+    const c = this.cur;
+    if (!c) return;
+    if (c.kind === 'reasoning') {
+      const secs = ((this.elapsed - c.t) / 1000).toFixed(1);
+      c.head.textContent = 'Thought for ' + secs + 's';
+      c.el.classList.add('closed');
+      c.head.setAttribute('aria-expanded', 'false');
+    }
+    this.cur = null;
+  }
+  block(kind) {
+    if (this.cur && this.cur.kind === kind) return this.cur;
+    this.closeCur();
+    const el = document.createElement('div');
+    const c = { kind: kind, el: el, raw: '', t: this.elapsed };
+    if (kind === 'reasoning') {
+      el.className = 'think';
+      c.head = document.createElement('button');
+      c.head.type = 'button'; c.head.className = 'th'; c.head.textContent = 'Thinking…';
+      c.head.setAttribute('aria-expanded', 'true');
+      c.head.addEventListener('click', () => {
+        const closed = el.classList.toggle('closed');
+        c.head.setAttribute('aria-expanded', String(!closed));
+      });
+      c.body = document.createElement('div'); c.body.className = 'tb';
+      c.inner = document.createElement('span'); c.body.appendChild(c.inner);
+      el.append(c.head, c.body);
+      this.setState('thinking', 'thinking');
+    } else {
+      el.className = 'say';
+      c.body = el; c.inner = document.createElement('span'); el.appendChild(c.inner);
+      this.setState('writing', 'writing');
+    }
+    this.log.appendChild(el);
+    this.cur = c;
+    return c;
+  }
+  stream(kind, s) {
+    const c = this.block(kind);
+    c.raw += s;
+    if (kind === 'reasoning') c.inner.textContent = c.raw; else c.inner.innerHTML = md(c.raw);
+    c.inner.appendChild(this.caret);
+  }
+  newTool(name) {
+    this.closeCur();
+    const el = document.createElement('div');
+    el.className = 'tool';
+    el.innerHTML = '<div class="call"><i></i><span><span class="name"></span><span class="arg"></span></span></div><div class="raw"></div>';
+    const t = { kind: 'tool', el: el, name: name || 'tool', raw: '', started: false, ended: false,
+      nameEl: el.querySelector('.name'), argEl: el.querySelector('.arg'), rawEl: el.querySelector('.raw') };
+    t.nameEl.textContent = TOOL_LABEL[t.name] || t.name;
+    this.log.appendChild(el);
+    this.tools.push(t);
+    this.cur = t;
+    this.setState('tool', 'calling ' + t.name);
+    return t;
+  }
+  toolArgs(s, name) {
+    let t = this.cur;
+    if (name || !t || t.kind !== 'tool') t = this.newTool(name);
+    t.raw += s;
+    t.rawEl.textContent = t.raw;
+    t.rawEl.appendChild(this.caret);
+  }
+  toolStart(name, summary) {
+    let t = this.tools.find((x) => !x.started && x.name === name) || this.tools.find((x) => !x.started);
+    if (!t) t = this.newTool(name);
+    t.started = true;
+    t.el.classList.add('running');
+    t.argEl.textContent = '(' + summary + ')';
+    t.rawEl.remove();
+    if (this.caret.parentNode === t.rawEl) this.caret.remove();
+    if (this.cur === t) this.cur = null;
+    this.setState('tool', 'running ' + name);
+  }
+  toolEnd(name, out, err) {
+    const t = this.tools.find((x) => x.started && !x.ended && x.name === name) || this.tools.find((x) => x.started && !x.ended);
+    if (!t) return;
+    t.ended = true;
+    t.el.classList.remove('running');
+    t.el.classList.add(err ? 'bad' : 'ok');
+    const o = document.createElement('div');
+    o.className = 'out';
+    o.textContent = cleanOut(name, out || '') || '(no output)';
+    t.el.appendChild(o);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Lanes: chunk arrivals vs. pops actually played.
+ * ------------------------------------------------------------------------- */
+let colors = {};
+function readColors() {
+  const cs = getComputedStyle(document.documentElement);
+  const g = (n) => cs.getPropertyValue(n).trim();
+  colors = { text: g('--pop'), reasoning: g('--think'), tool_args: g('--tool'), cue: g('--fg'), line: g('--line'), dim: g('--dim') };
+}
+const SPAN = 4000;
+function drawLane(p, now) {
+  const c = p.canvas, dpr = window.devicePixelRatio || 1;
+  const w = c.clientWidth, h = c.clientHeight;
+  if (!w) return;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) { c.width = Math.round(w * dpr); c.height = Math.round(h * dpr); }
+  const g = c.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const y1 = h * 0.28, y2 = h * 0.74;
+  g.fillStyle = colors.line;
+  g.fillRect(0, y1, w, 1); g.fillRect(0, y2, w, 1);
+  const cut = now - SPAN;
+  while (p.chunkMarks.length && p.chunkMarks[0][0] < cut) p.chunkMarks.shift();
+  while (p.popMarks.length && p.popMarks[0][0] < cut) p.popMarks.shift();
+  const X = (t) => w - (now - t) / SPAN * w;
+  g.globalAlpha = 0.75;
+  for (const [t, k] of p.chunkMarks) { g.fillStyle = colors[k]; g.fillRect(X(t), y1 - 7, 1.5, 14); }
+  g.globalAlpha = 1;
+  for (const [t, k] of p.popMarks) {
+    const x = X(t);
+    g.beginPath();
+    if (k === 'cue') { g.strokeStyle = colors.cue; g.lineWidth = 1.5; g.arc(x, y2, 5.5, 0, Math.PI * 2); g.stroke(); }
+    else { g.fillStyle = colors[k]; g.arc(x, y2, 3.6, 0, Math.PI * 2); g.fill(); }
+  }
+  const secs = p.running || p.elapsed ? (p.elapsed / 1000).toFixed(1) : '0.0';
+  p.lfL.textContent = p.chunks + ' chunks → ' + p.pops + ' pops';
+  p.lfR.textContent = secs + 's';
+}
+
+/* ---------------------------------------------------------------------------
+ * Wiring
+ * ------------------------------------------------------------------------- */
+let panes = [];
+const stage = document.getElementById('stage');
+const promptEl = document.getElementById('prompt');
+const sendBtn = document.getElementById('send');
+const sendLabel = document.getElementById('send-label');
+const dot = document.getElementById('logo-dot');
+
+function onPops(list) {
+  const now = performance.now();
+  let hit = false;
+  for (const [agent, kind] of list) {
+    const p = panes.find((x) => x.id === agent);
+    if (!p) continue;
+    p.popMarks.push([now, kind]);
+    if (kind !== 'cue') p.pops++;
+    hit = true;
+  }
+  if (hit) { dot.classList.remove('hit'); void dot.offsetWidth; dot.classList.add('hit'); }
+}
+
+function build() {
+  stopAll();
+  stage.innerHTML = '';
+  const duet = state.scn === 'duet';
+  stage.classList.toggle('duet', duet);
+  document.getElementById('duet-note').hidden = !duet;
+  if (duet) {
+    panes = [new Pane('A', 'Agent 1', 'L', SESSIONS.A), new Pane('B', 'Agent 2', 'R', SESSIONS.B)];
+    promptEl.value = 'Agent 1: ' + SESSIONS.A.prompt + '\nAgent 2: ' + SESSIONS.B.prompt;
+  } else {
+    panes = [new Pane(state.scn, 'Agent', '', SESSIONS[state.scn])];
+    promptEl.value = SESSIONS[state.scn].prompt;
+  }
+  panes.forEach((p) => stage.appendChild(p.el));
+  setSend('send');
+}
+function setSend(mode) {
+  sendBtn.classList.toggle('stop', mode === 'stop');
+  sendLabel.textContent = mode === 'stop' ? 'Stop' : mode === 'again' ? 'Send again' : 'Send';
+}
+function stopAll() { panes.forEach((p) => p.stop()); state.running = false; }
+function paneFinished() {
+  if (panes.every((p) => !p.running)) { state.running = false; setSend('again'); }
+}
+
+document.getElementById('composer').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (state.running) { stopAll(); panes.forEach((p) => p.setState('idle', 'stopped')); setSend('again'); return; }
+  const ready = Audio.init();
+  ready.then(() => {
+    state.running = true;
+    setSend('stop');
+    panes.forEach((p, i) => p.start(i * 400));
+  });
+});
+
+function segment(id, attr, onPick) {
+  const seg = document.getElementById(id);
+  seg.addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    seg.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+    onPick(b.dataset[attr]);
+  });
+}
+segment('pack-seg', 'pack', (v) => { state.pack = v; Audio.post({ t: 'pack', v: v }); });
+segment('scn-seg', 'scn', (v) => { state.scn = v; build(); });
+document.getElementById('think-sound').addEventListener('change', (e) => { state.thinkSound = e.target.checked; });
+document.getElementById('vol').addEventListener('input', (e) => { state.volume = e.target.value / 100; Audio.setVolume(state.volume); });
+
+function loop(now) {
+  for (const p of panes) p.tick(now);
+  for (const p of panes) drawLane(p, now);
+  requestAnimationFrame(loop);
+}
+readColors();
+setInterval(readColors, 1000);
+build();
+requestAnimationFrame(loop);
+</script>
