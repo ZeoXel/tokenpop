@@ -1,5 +1,0 @@
-# Usage: dsh headless --patch ./patch.yml "your task"
-# The plugin path must be absolute.
-- insert:
-    - id: tokenpop-spike
-      name: '/ABSOLUTE/PATH/TO/tokenpop/adapters/dsh/spike/tokenpop-spike.mjs'

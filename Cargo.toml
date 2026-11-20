@@ -1,0 +1,22 @@
+[package]
+name = "tokenpop"
+version = "0.1.0"
+edition = "2021"
+description = "Hear your agents think: tiny pops for every streamed token."
+license = "MIT"
+repository = "https://github.com/ZeoXel/tokenpop"
+
+[features]
+default = ["playback"]
+# Real-time audio output via cpal. Disable to build a render-only binary.
+playback = ["dep:cpal"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+cpal = { version = "0.15", optional = true }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
