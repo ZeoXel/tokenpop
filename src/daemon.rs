@@ -3,10 +3,12 @@
 //! Lines carrying `"cmd"` are control messages:
 //! `{"cmd":"mute"}`, `{"cmd":"unmute"}`, `{"cmd":"pack","name":"mech"}`.
 
+use std::io::Write;
 use std::io::{BufRead, BufReader};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender};
+use std::sync::{Arc, Mutex};
 use std::thread;
 
 use crate::engine::Engine;
@@ -52,8 +54,28 @@ pub fn parse_msg(line: &str) -> Option<Msg> {
     parse_line(line).map(Msg::Event)
 }
 
+/// Optional event recorder: every event line is appended verbatim (JSONL),
+/// ready for `tokenpop render` or video making.
+pub type Recorder = Option<Arc<Mutex<std::fs::File>>>;
+
+pub fn open_recorder(path: Option<&Path>) -> Result<Recorder, String> {
+    match path {
+        None => Ok(None),
+        Some(p) => std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(p)
+            .map(|f| Some(Arc::new(Mutex::new(f))))
+            .map_err(|e| format!("{}: {e}", p.display())),
+    }
+}
+
 /// Bind the socket and forward every parsed line to `tx`. Blocks forever.
 pub fn serve(path: &Path, tx: Sender<Msg>) -> std::io::Result<()> {
+    serve_with(path, tx, None)
+}
+
+pub fn serve_with(path: &Path, tx: Sender<Msg>, record: Recorder) -> std::io::Result<()> {
     if path.exists() {
         // A live daemon answers; a stale socket file does not.
         if UnixStream::connect(path).is_ok() {
@@ -68,9 +90,15 @@ pub fn serve(path: &Path, tx: Sender<Msg>) -> std::io::Result<()> {
     eprintln!("tokenpop: listening on {}", path.display());
     for conn in listener.incoming().flatten() {
         let tx = tx.clone();
+        let record = record.clone();
         thread::spawn(move || {
             for line in BufReader::new(conn).lines().map_while(Result::ok) {
                 if let Some(m) = parse_msg(&line) {
+                    if let (Msg::Event(_), Some(r)) = (&m, &record) {
+                        if let Ok(mut f) = r.lock() {
+                            let _ = writeln!(f, "{}", line.trim());
+                        }
+                    }
                     if tx.send(m).is_err() {
                         return;
                     }
@@ -93,7 +121,7 @@ pub fn drain(engine: &mut Engine, rx: &Receiver<Msg>) {
 }
 
 #[cfg(feature = "playback")]
-pub fn run(path: &Path, pack: Pack) -> Result<(), String> {
+pub fn run(path: &Path, pack: Pack, record: Recorder) -> Result<(), String> {
     use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
     let host = cpal::default_host();
@@ -145,16 +173,23 @@ pub fn run(path: &Path, pack: Pack) -> Result<(), String> {
         sr,
         pack.name()
     );
-    serve(path, tx).map_err(|e| e.to_string())
+    serve_with(path, tx, record).map_err(|e| e.to_string())
 }
 
 #[cfg(not(feature = "playback"))]
-pub fn run(_path: &Path, _pack: Pack) -> Result<(), String> {
-    let _ = (
-        mpsc::channel::<Msg>,
-        drain as fn(&mut Engine, &Receiver<Msg>),
-    );
-    Err("this build has no audio playback (built without the `playback` feature)".into())
+pub fn run(_path: &Path, _pack: Pack, _record: Recorder) -> Result<(), String> {
+    Err(
+        "this build has no audio playback (built without the `playback` feature); use --no-audio"
+            .into(),
+    )
+}
+
+/// Accept events without playing them (recording only, or headless machines).
+pub fn run_silent(path: &Path, record: Recorder) -> Result<(), String> {
+    let (tx, rx) = mpsc::channel::<Msg>();
+    thread::spawn(move || for _ in rx {});
+    eprintln!("tokenpop: no audio output; recording only");
+    serve_with(path, tx, record).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

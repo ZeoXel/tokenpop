@@ -8,7 +8,11 @@ const USAGE: &str = "\
 tokenpop: hear your agents think
 
 USAGE:
-  tokenpop daemon [--pack NAME]            play events from the local socket
+  tokenpop daemon [--pack NAME] [--record FILE] [--no-audio]
+                                           play events from the local socket
+  tokenpop proxy --upstream URL [--port N] [--agent NAME] [--cues]
+                                           tap a model API's streamed responses
+  tokenpop hook claude|codex [JSON]        forward an agent hook event
   tokenpop render [OPTIONS] REC[@SECS]...  render recordings to a WAV file
   tokenpop mute | unmute                   silence / resume a running daemon
   tokenpop pack NAME                       switch the running daemon's pack
@@ -31,8 +35,24 @@ fn main() -> ExitCode {
         Some("render") => cmd_render(&args[1..]),
         #[cfg(unix)]
         Some("daemon") => {
+            let sock = tokenpop::daemon::default_socket();
+            let record =
+                tokenpop::daemon::open_recorder(flag(&args, "--record").map(std::path::Path::new));
             let pack = flag(&args, "--pack").map_or(Ok(Pack::Blip), parse_pack);
-            pack.and_then(|p| tokenpop::daemon::run(&tokenpop::daemon::default_socket(), p))
+            match (pack, record) {
+                (Ok(_), Ok(r)) if args.iter().any(|a| a == "--no-audio") => {
+                    tokenpop::daemon::run_silent(&sock, r)
+                }
+                (Ok(p), Ok(r)) => tokenpop::daemon::run(&sock, p, r),
+                (Err(e), _) | (_, Err(e)) => Err(e),
+            }
+        }
+        #[cfg(all(unix, feature = "proxy"))]
+        Some("proxy") => cmd_proxy(&args),
+        #[cfg(unix)]
+        Some("hook") => {
+            cmd_hook(&args);
+            Ok(())
         }
         #[cfg(unix)]
         Some("mute") => send_line(r#"{"cmd":"mute"}"#),
@@ -135,4 +155,41 @@ fn cmd_render(args: &[String]) -> Result<(), String> {
         pack.name()
     );
     Ok(())
+}
+
+#[cfg(all(unix, feature = "proxy"))]
+fn cmd_proxy(args: &[String]) -> Result<(), String> {
+    let upstream = flag(args, "--upstream")
+        .ok_or("proxy needs --upstream URL (e.g. https://api.anthropic.com)")?;
+    let port = flag(args, "--port").map_or(Ok(7317), |p| p.parse().map_err(|_| "bad --port"))?;
+    let opts = tokenpop::proxy::Options {
+        upstream: upstream.to_string(),
+        port,
+        agent: flag(args, "--agent").unwrap_or("proxy").to_string(),
+        cues: args.iter().any(|a| a == "--cues"),
+    };
+    let sink = std::sync::Arc::new(tokenpop::sink::Sink::new(tokenpop::daemon::default_socket()));
+    tokenpop::proxy::run(opts, sink)
+}
+
+/// Never fails and never prints: a hook must not change agent behavior.
+#[cfg(unix)]
+fn cmd_hook(args: &[String]) {
+    use std::io::Read;
+    let Some(source) = args.get(1) else { return };
+    let json = match args.get(2) {
+        Some(j) => j.clone(),
+        None => {
+            let mut s = String::new();
+            let _ = std::io::stdin().take(1 << 20).read_to_string(&mut s);
+            s
+        }
+    };
+    let Ok(v) = serde_json::from_str::<serde_json::Value>(&json) else {
+        return;
+    };
+    if let Some((agent, kind)) = tokenpop::hook::map(source, &v) {
+        let sink = tokenpop::sink::Sink::new(tokenpop::daemon::default_socket());
+        sink.send(&tokenpop::sink::event_line(&agent, kind, None));
+    }
 }
