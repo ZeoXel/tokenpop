@@ -2,12 +2,12 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:ital,wght@0,400;0,600;1,400&display=swap">
 <style>
-/* Layout: a toolbar with picks, then a grid of preset cards that each audition the same real session. */
+/* Layout: sticky picks bar; preset cards on the left; a sticky column on the right with the live session view and the per-layer mixer. */
 :root {
   --bg: #f4f2f7; --panel: #ffffff; --panel-2: #f8f6fb; --line: #e1dce8; --fg: #1c1922; --dim: #6c6578;
-  --pop: #d2397f; --think: #4d5bd1; --tool: #9a6a00; --pick: #c98a00; --pop-soft: rgba(210, 57, 127, .10);
+  --pop: #d2397f; --think: #4d5bd1; --tool: #9a6a00; --ok: #1d8450; --pick: #c98a00; --pop-soft: rgba(210, 57, 127, .10);
   --font-display: "Bricolage Grotesque", "Inter", system-ui, sans-serif;
   --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -15,12 +15,12 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #121015; --panel: #1a1720; --panel-2: #15131a; --line: #2b2634; --fg: #ece7f3; --dim: #8f879d;
-    --pop: #ff7db5; --think: #9da9ff; --tool: #f0c060; --pick: #ffc94d; --pop-soft: rgba(255, 125, 181, .12); color-scheme: dark;
+    --pop: #ff7db5; --think: #9da9ff; --tool: #f0c060; --ok: #6fd39a; --pick: #ffc94d; --pop-soft: rgba(255, 125, 181, .12); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #121015; --panel: #1a1720; --panel-2: #15131a; --line: #2b2634; --fg: #ece7f3; --dim: #8f879d;
-  --pop: #ff7db5; --think: #9da9ff; --tool: #f0c060; --pick: #ffc94d; --pop-soft: rgba(255, 125, 181, .12); color-scheme: dark;
+  --pop: #ff7db5; --think: #9da9ff; --tool: #f0c060; --ok: #6fd39a; --pick: #ffc94d; --pop-soft: rgba(255, 125, 181, .12); color-scheme: dark;
 }
 * { box-sizing: border-box; }
 body {
@@ -28,94 +28,150 @@ body {
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-block: 20px 32px;
 }
-.wrap { max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
 h1 { font: 700 28px/1.1 var(--font-display); letter-spacing: -.02em; margin: 0; text-wrap: balance; }
 h1 span { color: var(--pop); }
-.intro { color: var(--dim); max-width: 70ch; margin: 4px 0 0; }
+h2 { font: 600 15px/1.2 var(--font-display); margin: 0; }
+.intro { color: var(--dim); max-width: 72ch; margin: 4px 0 0; }
 
-.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;
-  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
-body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
-.bar .picks { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; }
+.picks { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim); font-weight: 600; }
 .chip { font: 500 12.5px var(--font-ui); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; background: var(--panel-2); }
 .empty { color: var(--dim); font-size: 13px; }
-.btn { font: 600 13px var(--font-ui); border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); border-radius: 8px; padding: 6px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.btn { font: 600 13px var(--font-ui); border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
 .btn:hover { border-color: var(--dim); }
 .btn.primary { background: var(--pop); border-color: var(--pop); color: #fff; }
-.btn:focus-visible, .play:focus-visible, .pick:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--pop); outline-offset: 2px; }
+.btn:focus-visible, .play:focus-visible, .pick:focus-visible, select:focus-visible, input:focus-visible + .sw, input[type=range]:focus-visible { outline: 2px solid var(--pop); outline-offset: 2px; }
 .vol { display: flex; align-items: center; gap: 8px; }
-input[type=range] { width: 100px; accent-color: var(--pop); }
+input[type=range] { accent-color: var(--pop); }
+#vol { width: 96px; }
 .status { font: 12px var(--font-mono); color: var(--dim); }
 
-.grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-@media (max-width: 980px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 14px; align-items: start; }
+.side { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 70px); display: flex; flex-direction: column; gap: 12px; min-width: 0; max-height: calc(100vh - 86px); overflow-y: auto; }
+@media (max-width: 1040px) { .layout { grid-template-columns: 1fr; } .side { position: static; order: -1; max-height: none; overflow: visible; } }
 
-.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 10px; min-width: 0; position: relative; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 620px) { .grid { grid-template-columns: 1fr; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px 11px; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
 .card.playing { border-color: var(--pop); box-shadow: 0 0 0 3px var(--pop-soft); }
 .card.picked { border-color: var(--pick); }
 .head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.name { font: 700 19px/1.15 var(--font-display); letter-spacing: -.01em; }
+.name { font: 700 18px/1.15 var(--font-display); letter-spacing: -.01em; }
 .idx { font: 11px var(--font-mono); color: var(--dim); }
-.line { color: var(--dim); font-size: 13px; min-height: 2.9em; }
+.line { color: var(--dim); font-size: 13px; }
 .tags { display: flex; flex-wrap: wrap; gap: 5px; }
 .tag { font: 500 11px var(--font-mono); color: var(--dim); border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; }
 .ctl { display: flex; align-items: center; gap: 10px; }
-.play { flex: none; width: 38px; height: 38px; border-radius: 50%; border: 0; background: var(--pop); color: #fff; cursor: pointer; display: grid; place-items: center; }
-.play svg { width: 14px; height: 14px; }
-.meter { flex: 1; min-width: 0; height: 38px; display: block; }
+.play { flex: none; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--pop); color: #fff; cursor: pointer; display: grid; place-items: center; }
+.play svg { width: 13px; height: 13px; }
+.meter { flex: 1; min-width: 0; height: 36px; display: block; }
 .pick { flex: none; border: 1px solid var(--line); background: var(--panel-2); color: var(--dim); border-radius: 8px; padding: 6px 10px; font: 600 12.5px var(--font-ui); cursor: pointer; }
 .pick[aria-pressed="true"] { color: var(--pick); border-color: var(--pick); background: transparent; }
-.prog { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+
+/* Session view */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--line); background: var(--panel-2); }
+.now { font: 12px var(--font-mono); color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.now b { color: var(--fg); font-weight: 600; }
+.phases { display: flex; flex-wrap: wrap; gap: 5px; padding: 9px 14px; border-bottom: 1px solid var(--line); }
+.ph { font: 600 11px var(--font-mono); color: var(--dim); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; display: inline-flex; align-items: center; gap: 5px; }
+.ph i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.ph.on { color: var(--fg); border-color: var(--dim); }
+.ph.on i { background: var(--c, var(--pop)); }
+.ph.hit i { box-shadow: 0 0 0 3px var(--pop-soft); }
+.ph.off { text-decoration: line-through; opacity: .55; }
+.log { font: 12.5px/1.6 var(--font-mono); padding: 10px 14px 14px; height: 250px; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 9px; overflow-wrap: anywhere; }
+@media (max-width: 1040px) { .log { height: 240px; } }
+.log .hint { color: var(--dim); }
+.user { background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+.user::before { content: "› "; color: var(--pop); font-weight: 600; }
+.think { color: var(--dim); font-style: italic; white-space: pre-wrap; border-left: 2px solid var(--think); padding-left: 9px; }
+.think.closed { font-style: normal; color: var(--think); border-left-color: transparent; padding-left: 0; }
+.say { white-space: pre-wrap; }
+.say code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 3px; }
+.say strong { font-weight: 600; }
+.tool .call { display: flex; gap: 7px; align-items: baseline; }
+.tool .call i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--tool); }
+.tool.ok .call i { background: var(--ok); }
+.tool .nm { color: var(--tool); font-weight: 600; }
+.tool .raw, .tool .out { color: var(--dim); font-size: 11.5px; white-space: pre-wrap; padding-left: 14px; }
+.caret { display: inline-block; width: .5em; height: 1em; vertical-align: -0.15em; background: var(--pop); margin-left: 1px; animation: blink 1s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+.prog { height: 3px; background: var(--line); }
 .prog i { display: block; height: 100%; width: 0; background: var(--pop); }
 
-.legend { display: flex; flex-wrap: wrap; gap: 14px; color: var(--dim); font-size: 12.5px; }
-.legend span { display: inline-flex; gap: 6px; align-items: center; }
-.legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.legend i.ring { background: transparent; border: 1.5px solid var(--fg); width: 9px; height: 9px; }
-@media (prefers-reduced-motion: reduce) { .prog i { transition: none; } }
+/* Mixer */
+.mix { padding: 4px 14px 10px; display: flex; flex-direction: column; }
+.row { display: grid; grid-template-columns: auto minmax(0, 1fr) 132px 74px; gap: 4px 10px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row.disabled .lbl, .row.disabled select, .row.disabled input[type=range] { opacity: .45; }
+.tg { position: relative; display: inline-flex; cursor: pointer; }
+.tg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.sw { width: 28px; height: 16px; border-radius: 8px; background: var(--line); position: relative; transition: background .15s; }
+.sw::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--panel); transition: transform .15s; }
+.tg input:checked + .sw { background: var(--c, var(--pop)); }
+.tg input:checked + .sw::after { transform: translateX(12px); }
+.lbl { min-width: 0; }
+.lbl b { font-weight: 600; font-size: 13px; display: block; }
+.lbl small { color: var(--dim); font-size: 11.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+select { width: 100%; font: 12.5px var(--font-ui); color: var(--fg); background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+.row input[type=range] { width: 100%; }
+@media (max-width: 460px) { .row { grid-template-columns: auto minmax(0, 1fr) 110px; } .row input[type=range] { grid-column: 2 / -1; } }
+.mix-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
 </style>
 
 <div class="wrap">
   <header>
     <h1>tokenpop <span>Sound Lab</span></h1>
-    <p class="intro">Fifteen voices for the same real DeepSeek Harness session: prompt, a moment of thinking, seven tool calls, the answer, done. Play a few, pick the ones that should ship first, then copy your picks.</p>
+    <p class="intro">Fifteen voices on one real DeepSeek Harness session: the prompt is sent, the model thinks, types seven tool calls, then writes the answer. Watch the session on the right while each voice plays, mix the layers to taste, and pick the voices that should ship first.</p>
   </header>
 
   <div class="bar" role="region" aria-label="Your picks">
     <div class="picks" id="picks"><span class="label">Picks</span><span class="empty">Nothing picked yet</span></div>
     <button class="btn" id="play-all" type="button">Play all</button>
     <div class="vol"><label class="label" for="vol">Volume</label><input type="range" id="vol" min="0" max="100" value="55"></div>
-    <button class="btn primary" id="copy" type="button">Copy picks</button>
+    <button class="btn primary" id="copy" type="button">Copy picks + mix</button>
     <span class="status" id="status" aria-live="polite"></span>
   </div>
 
-  <div class="legend" aria-label="Meter legend">
-    <span><i style="background:var(--think)"></i>thinking</span>
-    <span><i style="background:var(--pop)"></i>writing</span>
-    <span><i style="background:var(--tool)"></i>typing a tool call</span>
-    <span><i class="ring"></i>cue (tool start/end, done)</span>
-    <span>Each clip is 6 seconds. Same timing for every voice.</span>
-  </div>
+  <div class="layout">
+    <main class="grid" id="grid" aria-label="Voices"></main>
 
-  <main class="grid" id="grid"></main>
+    <aside class="side">
+      <section class="panel" aria-label="Session view">
+        <div class="panel-head"><h2>Session</h2><span class="now" id="now">Press play on any voice</span></div>
+        <div class="phases" id="phases"></div>
+        <div class="log" id="log"></div>
+        <div class="prog"><i id="prog"></i></div>
+      </section>
+
+      <section class="panel" aria-label="Sound layers">
+        <div class="panel-head"><h2>Layers</h2><button class="btn" id="reset-mix" type="button">Reset</button></div>
+        <div class="mix" id="mix"></div>
+      </section>
+    </aside>
+  </div>
 </div>
 
 <script>
-const EVENTS = [[0,"p"],[600,"x",1,100],[601,"x",3,246],[601,"x",6,181],[601,"x",3,122],[601,"x",8,180],[601,"x",3,202],[601,"x",4,122],[627,"x",8,188],[627,"x",4,136],[657,"x",8,158],[658,"x",4,122],[659,"x",5,43],[660,"x",1,241],[695,"a",2,40],[695,"a",7,178],[695,"a",1,165],[712,"a",3,15],[712,"a",2,232],[712,"a",2,22],[713,"a",2,222],[733,"a",1,165],[768,"a",3,41],[769,"a",11,105],[769,"a",1,165],[769,"a",3,15],[769,"a",4,161],[769,"a",8,188],[769,"a",6,70],[787,"a",1,165],[787,"a",1,168],[841,"a",2,40],[841,"a",7,41],[842,"a",1,165],[843,"a",3,15],[843,"a",2,53],[843,"a",2,156],[843,"a",1,241],[843,"a",2,34],[847,"a",1,165],[848,"a",1,168],[879,"s"],[924,"e"],[928,"s"],[956,"e"],[1556,"a",2,40],[1556,"a",4,67],[1556,"a",5,5],[1576,"a",1,165],[1576,"a",3,15],[1576,"a",4,212],[1587,"a",3,222],[1587,"a",1,165],[1603,"a",1,168],[1632,"a",2,40],[1633,"a",4,67],[1633,"a",5,5],[1633,"a",1,165],[1653,"a",3,15],[1654,"a",4,229],[1654,"a",2,119],[1673,"a",3,153],[1673,"a",3,222],[1674,"a",1,165],[1681,"a",1,168],[1703,"s"],[1705,"s"],[1717,"e"],[1719,"e"],[2319,"r",3,106],[2452,"r",4,122],[2471,"r",5,43],[2471,"r",3,154],[2471,"r",8,73],[2471,"r",8,199],[2487,"r",1,241],[2540,"a",2,40],[2540,"a",7,178],[2540,"a",1,165],[2540,"a",3,15],[2540,"a",6,151],[2540,"a",1,66],[2541,"a",5,43],[2541,"a",2,119],[2541,"a",3,153],[2571,"a",3,222],[2571,"a",1,218],[2571,"a",5,134],[2572,"a",4,206],[2572,"a",4,133],[2572,"a",1,109],[2583,"a",2,65],[2583,"a",1,142],[2583,"a",3,250],[2584,"a",1,165],[2603,"a",3,41],[2617,"a",11,105],[2617,"a",1,165],[2617,"a",3,15],[2636,"a",3,106],[2637,"a",4,122],[2638,"a",8,237],[2648,"a",5,43],[2648,"a",1,165],[2668,"a",1,168],[2677,"s"],[2732,"e"],[3332,"r",9,174],[3422,"r",1,241],[3424,"r",4,170],[3425,"r",4,186],[3438,"r",3,154],[3438,"r",7,93],[3455,"r",2,58],[3455,"r",2,60],[3455,"r",2,167],[3455,"r",1,241],[3477,"x",9,174],[3477,"x",4,122],[3482,"x",8,199],[3482,"x",1,109],[3482,"x",2,205],[3482,"x",3,116],[3482,"x",1,23],[3498,"x",1,213],[3498,"x",1,203],[3498,"x",1,127],[3516,"x",1,66],[3516,"x",2,236],[3516,"x",8,106],[3516,"x",2,205],[3530,"x",1,56],[3531,"x",1,28],[3531,"x",2,67],[3545,"x",4,218],[3561,"x",4,99],[3561,"x",3,3],[3561,"x",3,36],[3580,"x",2,205],[3580,"x",4,212],[3583,"x",3,222],[3595,"x",1,109],[3605,"x",1,213],[3619,"x",1,191],[3620,"x",2,113],[3620,"x",2,205],[3634,"x",3,116],[3634,"x",1,191],[3634,"x",9,27],[3649,"x",1,130],[3649,"x",8,71],[3649,"x",3,98],[3649,"x",5,107],[3664,"x",1,241],[3697,"a",2,40],[3698,"a",4,67],[3710,"a",5,5],[3711,"a",1,165],[3711,"a",3,15],[3724,"a",1,94],[3725,"a",4,69],[3725,"a",4,229],[3727,"a",5,132],[3727,"a",1,94],[3728,"a",4,212],[3743,"a",4,147],[3743,"a",1,94],[3744,"a",4,212],[3744,"a",3,222],[3744,"a",1,165],[3779,"a",3,41],[3779,"a",3,214],[3780,"a",7,159],[3780,"a",1,165],[3784,"a",3,15],[3784,"a",3,87],[3785,"a",7,93],[3785,"a",2,58],[3785,"a",2,22],[3796,"a",2,167],[3797,"a",1,165],[3810,"a",3,41],[3810,"a",3,17],[3810,"a",7,159],[3825,"a",1,165],[3825,"a",3,15],[3825,"a",3,87],[3849,"a",7,93],[3849,"a",2,58],[3849,"a",2,60],[3849,"a",2,167],[3849,"a",1,165],[3854,"a",1,168],[3878,"s"],[3913,"e"],[4513,"a",2,40],[4514,"a",7,178],[4514,"a",1,165],[4523,"a",3,15],[4523,"a",6,151],[4524,"a",1,66],[4545,"a",5,43],[4546,"a",2,119],[4546,"a",3,153],[4546,"a",3,222],[4546,"a",1,218],[4546,"a",5,134],[4557,"a",4,206],[4558,"a",4,133],[4558,"a",1,109],[4558,"a",2,65],[4558,"a",1,142],[4558,"a",3,250],[4580,"a",1,165],[4580,"a",3,41],[4581,"a",11,105],[4581,"a",1,165],[4608,"a",3,15],[4608,"a",1,181],[4608,"a",2,214],[4608,"a",2,90],[4622,"a",4,122],[4622,"a",5,43],[4622,"a",6,215],[4622,"a",4,122],[4631,"a",4,74],[4632,"a",1,165],[4639,"a",1,168],[4661,"s"],[4702,"e"],[5302,"x",5,153],[5317,"x",4,136],[5317,"x",9,3],[5334,"x",3,177],[5334,"x",2,53],[5334,"x",4,79],[5334,"x",4,24],[5352,"x",6,240],[5352,"x",3,61],[5352,"x",2,205],[5353,"x",4,229],[5369,"x",2,119],[5369,"x",3,153],[5369,"x",3,222],[5369,"x",1,191],[5369,"x",8,198],[5369,"x",2,205],[5384,"x",3,116],[5384,"x",1,23],[5384,"x",1,213],[5399,"x",1,203],[5399,"x",1,127],[5399,"x",1,66],[5399,"x",1,132],[5399,"x",3,193],[5399,"x",1,127],[5412,"x",1,208],[5412,"x",2,105],[5412,"x",4,198],[5412,"x",4,122],[5412,"x",2,205],[5432,"x",3,116],[5432,"x",1,191],[5432,"x",9,159],[5433,"x",3,36],[5433,"x",2,172],[5433,"x",4,212],[5441,"x",3,222],[5442,"x",2,32],[5442,"x",4,212],[5442,"x",3,222],[5442,"x",1,109],[5456,"x",1,213],[5456,"x",1,132],[5476,"x",4,136],[5477,"x",2,205],[5477,"x",6,191],[5496,"x",2,58],[5496,"x",2,22],[5497,"x",2,167],[5497,"x",2,105],[5497,"x",3,209],[5513,"x",3,226],[5514,"x",9,148],[5532,"x",2,205],[5532,"x",1,56],[5532,"x",1,28],[5549,"x",1,191],[5549,"x",4,136],[5549,"x",4,122],[5562,"x",10,113],[5563,"x",7,234],[5563,"x",5,103],[5563,"x",5,255],[5584,"x",5,14],[5584,"x",1,127],[5585,"x",1,28],[5585,"x",1,241],[5585,"x",2,205],[5585,"x",3,129],[5599,"x",1,191],[5600,"x",4,24],[5600,"x",8,137],[5600,"x",8,11],[5600,"x",3,177],[5600,"x",2,53],[5600,"x",3,188],[5629,"x",4,74],[5630,"x",3,61],[5630,"x",2,2],[5630,"x",8,45],[5630,"x",5,174],[5663,"x",4,77],[5692,"x",5,221],[5693,"x",3,154],[5693,"x",2,205],[5693,"x",6,191],[5693,"x",2,58],[5693,"x",2,60],[5693,"x",2,167],[5693,"x",2,67],[5693,"x",2,215],[5723,"x",2,214],[5724,"x",6,156],[5724,"x",4,122],[5724,"x",5,43],[5724,"x",4,201],[5725,"x",7,111],[5725,"x",2,205],[5725,"x",2,175],[5725,"x",1,191],[5725,"x",4,136],[5747,"x",6,100],[5748,"x",1,127],[5760,"x",1,175],[5761,"x",1,241],[5771,"x",4,218],[5771,"x",5,43],[5788,"x",5,17],[5804,"x",7,52],[5804,"x",4,24],[5817,"x",5,151],[5852,"x",1,203],[5852,"x",3,209],[5852,"x",3,196],[5852,"x",8,248],[5860,"x",5,190],[5860,"x",7,162],[5860,"x",6,71],[5861,"x",1,241],[5887,"d"]];
+const SESSION = {"prompt":"The test in test_calc.py is failing. Run it, find the bug, fix it, and rerun to confirm. Then summarize the fix in two sentences.","events":[[0,"prompt"],[600,"text","I"],[616,"text","'ll"],[616,"text"," start"],[616,"text"," by"],[616,"text"," looking"],[630,"text"," at"],[630,"text"," the"],[630,"text"," files"],[630,"text"," in"],[630,"text"," the"],[646,"text"," workspace"],[647,"text","."],[679,"tool_args","","bash"],[679,"tool_args","{\""],[695,"tool_args","command"],[695,"tool_args","\""],[695,"tool_args",": \""],[710,"tool_args","ls"],[710,"tool_args"," -"],[710,"tool_args","la"],[710,"tool_args","\""],[726,"tool_args",", \""],[741,"tool_args","description"],[741,"tool_args","\""],[741,"tool_args",": \""],[757,"tool_args","List"],[757,"tool_args"," files"],[757,"tool_args"," in"],[757,"tool_args"," workspace"],[776,"tool_args","\""],[776,"tool_args","}"],[802,"tool_args","","glob"],[818,"tool_args","{\""],[818,"tool_args","pattern"],[818,"tool_args","\""],[835,"tool_args",": \""],[835,"tool_args","**"],[835,"tool_args","/*"],[835,"tool_args","."],[836,"tool_args","py"],[849,"tool_args","\""],[849,"tool_args","}"],[889,"tool_start","bash","ls -la"],[925,"tool_end","bash","total 16\ndrwxr-xr-x 2 dev root 4096 Nov 20 07:49 .\ndrwxr-xr-x 8 dev root 4096 Nov 20 07:50 ..\n-rw-r--r-- 1 dev root   65 Nov 20 07:49 calc.py\n-rw-r--r-- 1 dev root   82 Nov 20 07:49 test_calc.py",0],[926,"tool_start","glob","**/*.py"],[1082,"tool_end","glob","calc.py\ntest_calc.py",0],[1682,"tool_args","","read"],[1693,"tool_args","{\""],[1694,"tool_args","file"],[1694,"tool_args","_path"],[1706,"tool_args","\""],[1706,"tool_args",": \""],[1706,"tool_args","calc"],[1718,"tool_args",".py"],[1718,"tool_args","\""],[1731,"tool_args","}"],[1752,"tool_args","","read"],[1763,"tool_args","{\""],[1763,"tool_args","file"],[1763,"tool_args","_path"],[1763,"tool_args","\""],[1777,"tool_args",": \""],[1777,"tool_args","test"],[1777,"tool_args","_c"],[1791,"tool_args","alc"],[1792,"tool_args",".py"],[1792,"tool_args","\""],[1831,"tool_args","}"],[1834,"tool_start","read","calc.py"],[1835,"tool_start","read","test_calc.py"],[1844,"tool_end","read","<path>~/demo/calc.py<\/path>\n<type>file<\/type>\n<content>\n1: def add(a, b):\n2:     return a - b\n3: \n4: def mul(a, b):\n… 4 more lines",0],[1846,"tool_end","read","<path>~/demo/test_calc.py<\/path>\n<type>file<\/type>\n<content>\n1: from calc import add, mul\n2: assert add(2, 3) == 5\n3: assert mul(2, 3) == 6\n4: print(\"ok\")\n… 3 more lines",0],[2446,"tool_args","","bash"],[2447,"tool_args","{\""],[2447,"tool_args","command"],[2447,"tool_args","\""],[2447,"tool_args",": \""],[2447,"tool_args","python"],[2447,"tool_args"," test"],[2447,"tool_args","_c"],[2447,"tool_args","alc"],[2447,"tool_args",".py"],[2447,"tool_args",";"],[2447,"tool_args"," echo"],[2447,"tool_args"," \\\""],[2504,"tool_args","exit"],[2504,"tool_args",":"],[2504,"tool_args"," $"],[2504,"tool_args","?\\\""],[2504,"tool_args","\""],[2516,"tool_args",", \""],[2516,"tool_args","description"],[2517,"tool_args","\""],[2517,"tool_args",": \""],[2554,"tool_args","Run"],[2554,"tool_args"," the"],[2554,"tool_args"," failing"],[2554,"tool_args"," test"],[2554,"tool_args","\""],[2555,"tool_args","}"],[2602,"tool_start","bash","python test_calc.py; echo \"exit: $?\""],[2685,"tool_end","bash","exit: 1\n[stderr]\nTraceback (most recent call last):\n  File \"~/demo/test_calc.py\", line 2, in <module>\n    assert add(2, 3) == 5\n           ^^^^^^^^^^^^^^\nAssertionError",0],[3285,"reasoning","Bug"],[3523,"reasoning",":"],[3543,"reasoning"," add"],[3543,"reasoning"," returns"],[3555,"reasoning"," a"],[3556,"reasoning"," -"],[3556,"reasoning"," b"],[3556,"reasoning","."],[3556,"reasoning"," Fix"],[3568,"reasoning","."],[3586,"text","Confirmed"],[3586,"text"," the"],[3599,"text"," failure"],[3599,"text",":"],[3599,"text"," `"],[3599,"text","add"],[3599,"text","("],[3612,"text","2"],[3613,"text",","],[3613,"text"," "],[3613,"text","3"],[3613,"text",")`"],[3613,"text"," returns"],[3629,"text"," `"],[3629,"text","-"],[3629,"text","1"],[3642,"text","`"],[3642,"text"," because"],[3658,"text"," `"],[3658,"text","add"],[3658,"text","`"],[3673,"text"," subtract"],[3673,"text","s"],[3686,"text","."],[3686,"text"," Fix"],[3686,"text","ing"],[3703,"text",":"],[3719,"tool_args","","edit"],[3730,"tool_args","{\""],[3730,"tool_args","file"],[3730,"tool_args","_path"],[3753,"tool_args","\""],[3753,"tool_args",": \""],[3753,"tool_args","calc"],[3763,"tool_args",".py"],[3763,"tool_args","\""],[3775,"tool_args",", \""],[3775,"tool_args","old"],[3775,"tool_args","_string"],[3791,"tool_args","\""],[3791,"tool_args",": \""],[3791,"tool_args","   "],[3805,"tool_args"," return"],[3805,"tool_args"," a"],[3805,"tool_args"," -"],[3805,"tool_args"," b"],[3805,"tool_args","\""],[3837,"tool_args",", \""],[3837,"tool_args","new"],[3837,"tool_args","_string"],[3837,"tool_args","\""],[3854,"tool_args",": \""],[3854,"tool_args","   "],[3854,"tool_args"," return"],[3854,"tool_args"," a"],[3854,"tool_args"," +"],[3869,"tool_args"," b"],[3869,"tool_args","\""],[3885,"tool_args","}"],[3915,"tool_start","edit","calc.py"],[3927,"tool_end","edit","The file ~/demo/calc.py has been updated successfully.",0],[4527,"tool_args","","bash"],[4543,"tool_args","{\""],[4543,"tool_args","command"],[4543,"tool_args","\""],[4558,"tool_args",": \""],[4558,"tool_args","python"],[4558,"tool_args"," test"],[4573,"tool_args","_c"],[4573,"tool_args","alc"],[4573,"tool_args",".py"],[4573,"tool_args",";"],[4573,"tool_args"," echo"],[4573,"tool_args"," \\\""],[4589,"tool_args","exit"],[4590,"tool_args",":"],[4590,"tool_args"," $"],[4590,"tool_args","?\\\""],[4590,"tool_args","\""],[4620,"tool_args",", \""],[4620,"tool_args","description"],[4620,"tool_args","\""],[4633,"tool_args",": \""],[4633,"tool_args","R"],[4633,"tool_args","er"],[4633,"tool_args","un"],[4633,"tool_args"," the"],[4633,"tool_args"," test"],[4649,"tool_args"," after"],[4649,"tool_args"," fix"],[4649,"tool_args","\""],[4672,"tool_args","}"],[4701,"tool_start","bash","python test_calc.py; echo \"exit: $?\""],[4727,"tool_end","bash","ok\nexit: 0",0],[5327,"text","Test"],[5339,"text"," passes"],[5339,"text"," now"],[5357,"text"," ("],[5357,"text","exit"],[5357,"text"," "],[5370,"text","0"],[5370,"text",","],[5371,"text"," prints"],[5371,"text"," `"],[5389,"text","ok"],[5389,"text","`"],[5389,"text",").\n\n"],[5389,"text","**"],[5389,"text","Summary"],[5389,"text",":**"],[5410,"text"," The"],[5410,"text"," bug"],[5410,"text"," was"],[5410,"text"," in"],[5421,"text"," `"],[5421,"text","calc"],[5421,"text",".py"],[5434,"text","`"],[5451,"text","'"],[5451,"text","s"],[5451,"text"," `"],[5451,"text","add"],[5451,"text","`"],[5463,"text"," function"],[5463,"text",","],[5463,"text"," which"],[5463,"text"," returned"],[5477,"text"," `"],[5477,"text","a"],[5477,"text"," -"],[5477,"text"," b"],[5477,"text","`"],[5503,"text"," instead"],[5503,"text"," of"],[5503,"text"," `"],[5503,"text","a"],[5503,"text"," +"],[5503,"text"," b"],[5513,"text","`,"],[5514,"text"," so"],[5514,"text"," `"],[5514,"text","add"],[5528,"text","("],[5529,"text","2"],[5529,"text",","],[5529,"text"," "],[5529,"text","3"],[5529,"text",")`"],[5542,"text"," yielded"],[5542,"text"," `"],[5542,"text","-"],[5542,"text","1"],[5568,"text","`"],[5568,"text"," and"],[5577,"text"," tri"],[5590,"text","pped"],[5590,"text"," the"],[5590,"text"," assertion"],[5590,"text","."],[5590,"text"," I"],[5610,"text"," changed"],[5610,"text"," the"],[5624,"text"," operator"],[5637,"text"," to"],[5637,"text"," `"],[5637,"text","+"],[5656,"text","`,"],[5656,"text"," and"],[5656,"text"," `"],[5667,"text","test"],[5685,"text","_c"],[5685,"text","alc"],[5685,"text",".py"],[5685,"text","`"],[5685,"text"," now"],[5686,"text"," passes"],[5697,"text"," completely"],[5697,"text","."],[5700,"done"]]};
 
-/* Presets. Every field maps 1:1 to a future pack.toml entry.
- * Voice fields: w wave (pulse|tri|sine|noise), duty, oct (semitones over the agent root),
- * dur, att, dec (decay time constant), gain, lp (low-pass Hz), slide (end/start pitch),
- * noise (0..1 mix), rnd (random spread of level/brightness), spread (random pan),
- * hz (fixed pitch instead of the scale), part [mult, gain, durMul, decMul], body [hz, gain, dur].
- * pace: [chars per pop, max pops/s, jitter] per stream kind. */
+/* Presets. Voice fields map 1:1 to a future pack.toml entry:
+ * w wave (pulse|tri|sine|noise), duty, oct (semitones over the agent root), dur, att, dec,
+ * gain, lp (low-pass Hz), slide (end/start pitch), noise (0..1), rnd (level/brightness spread),
+ * spread (random pan), hz (fixed pitch), part [mult, gain, durMul, decMul], body [hz, gain, dur].
+ * pace: [chars per pop, max pops/s, jitter] per stream. cue: style of one-shot sounds. */
 const PENTA = [0, 2, 4, 7, 9, 12, 14, 16];
 const PRESETS = [
   { id: 'blip', name: 'Blip', line: 'Dialogue-box chatter. Bright, cute, pitched to a pentatonic scale.', tags: ['cute', 'default today'],
     text: { w: 'pulse', duty: .25, dur: .045, dec: .018, gain: .2, lp: 3800, slide: .97 } },
-  { id: 'pixel', name: 'Pixel Voice', line: 'Animal-crossing style babble: narrow pulse, wide jumpy melody, a little rise per syllable.', tags: ['cute', 'talky'],
+  { id: 'pixel', name: 'Pixel Voice', line: 'Animal-crossing style babble: narrow pulse, jumpy melody, a little rise per syllable.', tags: ['cute', 'talky'],
     scale: [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 19], text: { w: 'pulse', duty: .125, dur: .065, dec: .04, gain: .15, lp: 3200, slide: 1.06 }, pace: { text: [3, 15, .35] } },
   { id: 'bubble', name: 'Bubble', line: 'Little rising bloops, like bubbles popping at the surface.', tags: ['soft', 'playful'],
     text: { w: 'sine', dur: .07, dec: .03, gain: .3, slide: 1.7, att: .004 }, reasoning: { w: 'sine', oct: -12, dur: .12, dec: .06, gain: .18, slide: 1.4 } },
@@ -123,7 +179,7 @@ const PRESETS = [
     text: { w: 'sine', dur: .25, dec: .07, gain: .32, part: [4, .25, .4, .35], att: .001 }, pace: { text: [6, 14, .2] } },
   { id: 'kalimba', name: 'Kalimba', line: 'Plucked metal tines, an octave up, with a tiny downward bend.', tags: ['warm', 'sparkly'],
     text: { w: 'tri', oct: 12, dur: .3, dec: .09, gain: .2, slide: .995, part: [3, .14, .3, .3] }, pace: { text: [6, 13, .2] } },
-  { id: 'musicbox', name: 'Music Box', line: 'High, ringing celesta notes. Slow and gentle; best for long thinking.', tags: ['calm', 'sparkly'],
+  { id: 'musicbox', name: 'Music Box', line: 'High, ringing celesta notes. Slow and gentle; good for long thinking.', tags: ['calm', 'sparkly'],
     text: { w: 'sine', oct: 24, dur: .55, dec: .2, gain: .13, part: [2, .18, .5, .5] }, reasoning: { w: 'sine', oct: 12, dur: .6, dec: .25, gain: .08 },
     pace: { text: [8, 10, .3], reasoning: [16, 5, .3] } },
   { id: 'woodblock', name: 'Wood Block', line: 'Short, dry, low knocks. Reads as "busy" without any melody.', tags: ['neutral', 'subtle'],
@@ -155,6 +211,7 @@ const PRESETS = [
     text: { w: 'noise', dur: .07, att: .012, dec: .025, gain: .13, lp: 2200, rnd: .35, spread: .4 },
     reasoning: { w: 'noise', dur: .1, att: .02, dec: .04, gain: .07, lp: 1100, rnd: .3 }, cue: { quiet: true } },
 ];
+const BY_ID = Object.fromEntries(PRESETS.map((p) => [p.id, p]));
 const DEFAULTS = {
   scale: PENTA,
   reasoning: { w: 'sine', oct: -12, dur: .11, att: .006, dec: .05, gain: .16 },
@@ -163,16 +220,42 @@ const DEFAULTS = {
   cue: { w: 'tri', gain: 1 },
 };
 function resolve(p) {
-  return Object.assign({}, p, {
-    scale: p.scale || DEFAULTS.scale,
-    reasoning: p.reasoning || DEFAULTS.reasoning,
-    tool: p.tool || DEFAULTS.tool,
+  return {
+    scale: p.scale || DEFAULTS.scale, text: p.text,
+    reasoning: p.reasoning || DEFAULTS.reasoning, tool: p.tool || DEFAULTS.tool,
     pace: Object.assign({}, DEFAULTS.pace, p.pace || {}),
     cue: Object.assign({}, DEFAULTS.cue, p.cue || {}),
-  });
+  };
 }
 
-/* Engine: the tokenpop scheduler/synth (see src/engine.rs), driven by a preset object. */
+/* Layers: each can be switched off, take its voice from another preset, and set its level. */
+const LAYERS = [
+  { id: 'send', label: 'Send', hint: 'You press Send', kind: 'cue', c: 'var(--fg)' },
+  { id: 'think', label: 'Thinking', hint: 'Reasoning tokens stream', kind: 'reasoning', c: 'var(--think)' },
+  { id: 'write', label: 'Writing', hint: 'Answer tokens stream', kind: 'text', c: 'var(--pop)' },
+  { id: 'para', label: 'Paragraph', hint: 'A new paragraph starts', kind: 'cue', c: 'var(--pop)' },
+  { id: 'typing', label: 'Tool typing', hint: 'Model writes tool arguments', kind: 'tool_args', c: 'var(--tool)' },
+  { id: 'tool', label: 'Tool calls', hint: 'A tool starts and returns', kind: 'cue', c: 'var(--tool)' },
+  { id: 'done', label: 'Done', hint: 'The turn is finished', kind: 'cue', c: 'var(--ok)' },
+];
+const MIX_DEFAULT = () => Object.fromEntries(LAYERS.map((l) => [l.id, { on: true, src: 'card', level: 100 }]));
+
+/* Combine the auditioned preset with the mixer into one engine preset. */
+function buildPreset(cardId, mix) {
+  const base = resolve(BY_ID[cardId]);
+  const src = (layer) => mix[layer].src === 'card' ? base : resolve(BY_ID[mix[layer].src]);
+  const lv = (layer) => mix[layer].level / 100;
+  const voice = (layer, key) => { const s = src(layer); return Object.assign({}, s[key], { gain: s[key].gain * lv(layer), scale: s.scale }); };
+  const cueOf = (layer) => Object.assign({}, src(layer).cue, { level: lv(layer) });
+  return {
+    scale: base.scale,
+    text: voice('write', 'text'), reasoning: voice('think', 'reasoning'), tool: voice('typing', 'tool'),
+    pace: { text: src('write').pace.text, reasoning: src('think').pace.reasoning, tool: src('typing').pace.tool },
+    cues: { prompt: cueOf('send'), para: cueOf('para'), tool_start: cueOf('tool'), tool_end: cueOf('tool'), done: cueOf('done') },
+  };
+}
+
+/* Engine: the tokenpop scheduler and synth (src/engine.rs), driven by a preset object. */
 function engineFactory() {
   var TICK = 64, MAX_VOICES = 40, IDLE_RESET = 0.25, MAX_BACKLOG = 0.3;
   var KIND = { text: 0, reasoning: 1, tool_args: 2 };
@@ -187,38 +270,41 @@ function engineFactory() {
   function voiceOf(P, kind) { return kind === 'text' ? P.text : kind === 'reasoning' ? P.reasoning : P.tool; }
   function paceOf(P, kind) { var p = P.pace[kind === 'tool_args' ? 'tool' : kind]; return { cpp: p[0], hz: p[1], jitter: p[2] }; }
   function pop(P, kind, v, sel, r) {
-    var p = voiceOf(P, kind), sc = P.scale;
+    var p = voiceOf(P, kind), sc = p.scale || P.scale;
     var f = p.hz ? p.hz : noteHz(v.root + (p.oct || 0) + sc[sel % sc.length]);
     var spread = (p.rnd || 0) * (r - 0.5) * 2;
     var gain = p.gain * (1 + spread * 0.5);
     var lp = p.lp ? p.lp * (1 + spread * 0.4) : 0;
     var pan = v.pan + (p.spread || 0) * (r - 0.5) * 2;
-    var noise = p.w === 'noise' ? 1 : (p.noise || 0);
-    var s = tone(p.w === 'noise' ? 'tri' : p.w, p.w === 'noise' ? 200 : f, p.dur, gain,
-      { duty: p.duty || 0.5, freqEnd: (p.w === 'noise' ? 200 : f) * (p.slide || 1), decay: p.dec, lowpass: lp, noise: noise, attack: p.att === undefined ? 0.002 : p.att, pan: pan });
+    var isNoise = p.w === 'noise', base = isNoise ? 200 : f;
+    var s = tone(isNoise ? 'tri' : p.w, base, p.dur, gain,
+      { duty: p.duty || 0.5, freqEnd: base * (p.slide || 1), decay: p.dec, lowpass: lp, noise: isNoise ? 1 : (p.noise || 0), attack: p.att === undefined ? 0.002 : p.att, pan: pan });
     var out = [s];
     if (p.part) out.push(tone('sine', f * p.part[0], p.dur * (p.part[2] || 1), gain * p.part[1], { decay: p.dec * (p.part[3] || 0.5), pan: pan }));
     if (p.body) out.push(tone('sine', p.body[0] * (0.92 + 0.16 * r), p.body[2], gain * p.body[1] / p.gain, { decay: p.body[2] * 0.35, pan: pan, attack: 0.0005 }));
     return out;
   }
   function cue(P, kind, v) {
-    var c = P.cue, k = c.quiet ? 0.45 : 1;
+    var c = P.cues[kind];
+    if (!c) return [];
+    var k = (c.quiet ? 0.45 : 1) * (c.level === undefined ? 1 : c.level);
+    if (k <= 0) return [];
     function t(semi, dur, gain, delay) {
       return tone(c.w === 'pulse' ? 'pulse' : 'tri', noteHz(v.root + semi), dur, gain * (c.gain || 1) * k, { delay: delay, pan: v.pan, decay: dur * 0.45 });
     }
-    function bell(delay, g) {
-      return [tone('sine', noteHz(v.root + 24), 0.6, 0.3 * g, { delay: delay, decay: 0.25, pan: v.pan }),
-              tone('sine', noteHz(v.root + 24) * 2.76, 0.4, 0.1 * g, { delay: delay, decay: 0.12, pan: v.pan })];
-    }
     switch (kind) {
       case 'prompt': return [tone('sine', noteHz(v.root - 5), 0.09, 0.25 * k, { freqEnd: noteHz(v.root + 7), pan: v.pan, attack: 0.01, decay: 0.05 })];
+      case 'para':
+        if (c.click) return [tone('tri', 400, 0.05, 0.16 * k, { noise: 0.6, lowpass: 3000, decay: 0.02, pan: v.pan })];
+        return [t(12, 0.1, 0.13, 0), t(19, 0.12, 0.1, 0.045)];
       case 'tool_start':
-        if (c.click) return [tone('tri', 900, 0.14, 0.12, { freqEnd: 2400, noise: 0.8, lowpass: 6000, decay: 0.08, pan: v.pan })];
+        if (c.click) return [tone('tri', 900, 0.14, 0.12 * k, { freqEnd: 2400, noise: 0.8, lowpass: 6000, decay: 0.08, pan: v.pan })];
         return [tone('sine', 160, 0.09, 0.45 * k, { freqEnd: 70, decay: 0.04, pan: v.pan }),
                 tone('sine', 1, 0.02, 0.25 * k, { noise: 1, decay: 0.006, lowpass: 4000, pan: v.pan })];
       case 'tool_end': return [t(7, 0.06, 0.22, 0), t(12, 0.09, 0.22, 0.055)];
       case 'done':
-        if (c.bell) return bell(0, 1);
+        if (c.bell) return [tone('sine', noteHz(v.root + 24), 0.6, 0.3 * k, { decay: 0.25, pan: v.pan }),
+                            tone('sine', noteHz(v.root + 24) * 2.76, 0.4, 0.1 * k, { decay: 0.12, pan: v.pan })];
         return [0, 4, 7, 12].map(function (s, i) { return t(s, i === 3 ? 0.35 : 0.12, 0.2, i * 0.07); });
     }
     return [];
@@ -330,7 +416,7 @@ const WORKLET_SRC =
   'class TokenPop extends AudioWorkletProcessor {\n' +
   '  constructor() { super(); this.e = new Engine(sampleRate);\n' +
   '    this.port.onmessage = (m) => { const d = m.data;\n' +
-  '      if (d.t === "ev") this.e.push(d.ev); else if (d.t === "preset") { this.e.panic(); this.e.P = d.v; } else if (d.t === "panic") this.e.panic(); }; }\n' +
+  '      if (d.t === "ev") this.e.push(d.ev); else if (d.t === "preset") { this.e.panic(); this.e.P = d.v; } else if (d.t === "mix") this.e.P = d.v; else if (d.t === "panic") this.e.panic(); }; }\n' +
   '  process(_i, outs) { const o = outs[0]; const L = o[0]; const R = o[1] || new Float32Array(L.length);\n' +
   '    this.e.render(L, R); const p = this.e.takePops(); if (p.length) this.port.postMessage(p); return true; }\n' +
   '}\nregisterProcessor("tokenpop", TokenPop);\n';
@@ -358,7 +444,12 @@ const Audio = {
         const sp = ctx.createScriptProcessor(1024, 1, 2);
         sp.onaudioprocess = (ev) => {
           const q = this.queue; this.queue = [];
-          for (const d of q) { if (d.t === 'ev') eng.push(d.ev); else if (d.t === 'preset') { eng.panic(); eng.P = d.v; } else if (d.t === 'panic') eng.panic(); }
+          for (const d of q) {
+            if (d.t === 'ev') eng.push(d.ev);
+            else if (d.t === 'preset') { eng.panic(); eng.P = d.v; }
+            else if (d.t === 'mix') eng.P = d.v;
+            else if (d.t === 'panic') eng.panic();
+          }
           eng.render(ev.outputBuffer.getChannelData(0), ev.outputBuffer.getChannelData(1));
           const p = eng.takePops(); if (p.length) onPops(p);
         };
@@ -371,14 +462,148 @@ const Audio = {
   post(m) { if (this.node) this.node.port.postMessage(m); else if (this.ctx) this.queue.push(m); },
 };
 
+function hash8(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return (h >>> 0) & 0xff; }
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const md = (raw) => esc(raw).replace(/`([^`\n]+)`/g, '<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+
+/* Mixer UI */
+let mix = Object.assign(MIX_DEFAULT(), store.get('tokenpop-mix', {}));
+const mixEl = document.getElementById('mix');
+const options = '<option value="card">Card voice</option>' + PRESETS.map((p) => '<option value="' + p.id + '">' + p.name + '</option>').join('');
+function renderMix() {
+  mixEl.innerHTML = '';
+  for (const l of LAYERS) {
+    const m = mix[l.id];
+    const row = document.createElement('div');
+    row.className = 'row' + (m.on ? '' : ' disabled');
+    row.style.setProperty('--c', l.c);
+    row.innerHTML =
+      '<label class="tg" title="Turn ' + l.label + ' on or off"><input type="checkbox" id="on-' + l.id + '"' + (m.on ? ' checked' : '') + '><span class="sw"></span></label>' +
+      '<div class="lbl"><b>' + l.label + '</b><small>' + l.hint + '</small></div>' +
+      '<select id="src-' + l.id + '" aria-label="' + l.label + ' voice">' + options + '</select>' +
+      '<input type="range" id="lv-' + l.id + '" min="0" max="150" step="5" value="' + m.level + '" aria-label="' + l.label + ' level">';
+    row.querySelector('select').value = m.src;
+    row.querySelector('input[type=checkbox]').addEventListener('change', (e) => { m.on = e.target.checked; row.classList.toggle('disabled', !m.on); mixChanged(); });
+    row.querySelector('select').addEventListener('change', (e) => { m.src = e.target.value; mixChanged(); });
+    row.querySelector('input[type=range]').addEventListener('input', (e) => { m.level = +e.target.value; mixChanged(); });
+    mixEl.appendChild(row);
+  }
+  const foot = document.createElement('div');
+  foot.className = 'mix-foot';
+  foot.innerHTML = '<span>"Card voice" follows the voice you are playing.</span>';
+  mixEl.appendChild(foot);
+  renderPhases();
+}
+function mixChanged() {
+  store.set('tokenpop-mix', mix);
+  if (current) Audio.post({ t: 'mix', v: buildPreset(current.id, mix) });
+  renderPhases();
+}
+document.getElementById('reset-mix').addEventListener('click', () => { mix = MIX_DEFAULT(); store.set('tokenpop-mix', mix); renderMix(); mixChanged(); });
+
+/* Session view */
+const logEl = document.getElementById('log'), phasesEl = document.getElementById('phases'), nowEl = document.getElementById('now'), progEl = document.getElementById('prog');
+function renderPhases() {
+  phasesEl.innerHTML = LAYERS.map((l) => '<span class="ph' + (mix[l.id].on ? '' : ' off') + '" data-layer="' + l.id + '" style="--c:' + l.c + '"><i></i>' + l.label + '</span>').join('');
+}
+function flash(layer) {
+  const el = phasesEl.querySelector('[data-layer="' + layer + '"]');
+  if (!el) return;
+  phasesEl.querySelectorAll('.ph.on').forEach((x) => x !== el && x.classList.remove('on'));
+  el.classList.add('on', 'hit');
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('hit'), 140);
+}
+const caret = document.createElement('span'); caret.className = 'caret';
+let view = null;
+function resetView(name) {
+  logEl.innerHTML = '';
+  const u = document.createElement('div'); u.className = 'user'; u.textContent = SESSION.prompt; logEl.appendChild(u);
+  view = { cur: null, tools: [], t0: 0 };
+  nowEl.innerHTML = 'Playing <b>' + esc(name) + '</b>';
+}
+function idleView() {
+  logEl.innerHTML = '<div class="hint">Press play on any voice. The session replays here in sync with the sound, so you can tell which sound belongs to which moment.</div>';
+  nowEl.textContent = 'Press play on any voice';
+  phasesEl.querySelectorAll('.ph').forEach((x) => x.classList.remove('on'));
+}
+function closeCur(el) {
+  const c = view.cur;
+  if (c && c.kind === 'reasoning') { c.el.classList.add('closed'); c.el.textContent = '✻ Thought for ' + ((el - c.t) / 1000).toFixed(1) + 's'; }
+  view.cur = null;
+}
+function block(kind, el) {
+  if (view.cur && view.cur.kind === kind) return view.cur;
+  closeCur(el);
+  const d = document.createElement('div');
+  d.className = kind === 'reasoning' ? 'think' : 'say';
+  logEl.appendChild(d);
+  view.cur = { kind, el: d, raw: '', t: el };
+  return view.cur;
+}
+function newTool(name) {
+  view.cur = null;
+  const d = document.createElement('div');
+  d.className = 'tool';
+  d.innerHTML = '<div class="call"><i></i><span><span class="nm"></span><span class="arg"></span></span></div><div class="raw"></div>';
+  d.querySelector('.nm').textContent = { bash: 'Bash', read: 'Read', glob: 'Glob', edit: 'Edit' }[name] || name;
+  logEl.appendChild(d);
+  const t = { kind: 'tool', name, el: d, raw: '', started: false, ended: false };
+  view.tools.push(t); view.cur = t;
+  return t;
+}
+function cleanOut(name, out) {
+  if (name === 'read') out = out.split('\n').filter((l) => !/^<\/?(path|type|content)>/.test(l)).join('\n');
+  return (out.trim().split('\n')[0] || '(no output)').slice(0, 80);
+}
+
+/* Session replay: drives both the view and the engine from the same events. */
+const CLIP_MS = SESSION.events[SESSION.events.length - 1][0] + 900;
+let current = null, autoplay = false;
+function send(layer, kind, extra) {
+  if (!mix[layer].on) return;
+  flash(layer);
+  Audio.post({ t: 'ev', ev: Object.assign({ agent: 'dsh', kind, chars: 0, h: 0 }, extra || {}) });
+}
+function dispatch(r, el) {
+  const k = r[1];
+  if (k === 'reasoning') {
+    const c = block('reasoning', el); c.raw += r[2]; c.el.textContent = c.raw; c.el.appendChild(caret);
+    send('think', 'reasoning', { chars: r[2].length, h: hash8(r[2]) });
+  } else if (k === 'text') {
+    const s = r[2];
+    const fresh = !(view.cur && view.cur.kind === 'text');
+    const c = block('text', el);
+    const breakHere = fresh || (/\n\s*\n/.test(c.raw.slice(-2) + s) && !/\n\s*\n/.test(c.raw.slice(-2)));
+    if (breakHere) send('para', 'para');
+    c.raw += s; c.el.innerHTML = md(c.raw); c.el.appendChild(caret);
+    send('write', 'text', { chars: s.length, h: hash8(s) });
+  } else if (k === 'tool_args') {
+    let t = view.cur;
+    if (r[3] || !t || t.kind !== 'tool') t = newTool(r[3] || 'tool');
+    t.raw += r[2]; t.el.querySelector('.raw').textContent = t.raw; t.el.querySelector('.raw').appendChild(caret);
+    if (r[2]) send('typing', 'tool_args', { chars: r[2].length, h: hash8(r[2]) });
+  } else if (k === 'tool_start') {
+    const t = view.tools.find((x) => !x.started && x.name === r[2]) || view.tools.find((x) => !x.started) || newTool(r[2]);
+    t.started = true; t.el.querySelector('.arg').textContent = '(' + r[3] + ')';
+    t.el.querySelector('.raw').remove(); if (view.cur === t) view.cur = null;
+    send('tool', 'tool_start');
+  } else if (k === 'tool_end') {
+    const t = view.tools.find((x) => x.started && !x.ended && x.name === r[2]) || view.tools.find((x) => x.started && !x.ended);
+    if (t) { t.ended = true; t.el.classList.add('ok'); const o = document.createElement('div'); o.className = 'out'; o.textContent = '⎿ ' + cleanOut(r[2], r[3] || ''); t.el.appendChild(o); }
+    send('tool', 'tool_end');
+  } else if (k === 'prompt') send('send', 'prompt');
+  else if (k === 'done') { closeCur(el); caret.remove(); send('done', 'done'); }
+}
+
 /* Cards */
-const KIND = { x: 'text', r: 'reasoning', a: 'tool_args', s: 'tool_start', e: 'tool_end', p: 'prompt', d: 'done' };
-const CLIP_MS = EVENTS.length ? EVENTS[EVENTS.length - 1][0] + 900 : 1000;
 const grid = document.getElementById('grid');
 const cards = new Map();
 const playIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>';
 const stopIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/></svg>';
-
 PRESETS.forEach((p, i) => {
   const el = document.createElement('article');
   el.className = 'card';
@@ -386,44 +611,37 @@ PRESETS.forEach((p, i) => {
     '<div class="head"><div class="name"></div><div class="idx">' + String(i + 1).padStart(2, '0') + '</div></div>' +
     '<div class="line"></div><div class="tags"></div>' +
     '<div class="ctl"><button class="play" type="button"></button><canvas class="meter"></canvas>' +
-    '<button class="pick" type="button" aria-pressed="false">☆ Pick</button></div>' +
-    '<div class="prog"><i></i></div>';
+    '<button class="pick" type="button" aria-pressed="false">☆ Pick</button></div>';
   el.querySelector('.name').textContent = p.name;
   el.querySelector('.line').textContent = p.line;
   el.querySelector('.tags').innerHTML = p.tags.map((t) => '<span class="tag">' + t + '</span>').join('');
   const play = el.querySelector('.play');
   play.innerHTML = playIcon; play.setAttribute('aria-label', 'Play ' + p.name);
   play.addEventListener('click', () => { autoplay = false; current && current.id === p.id ? stop() : start(p.id); });
-  const pick = el.querySelector('.pick');
-  pick.addEventListener('click', () => togglePick(p.id));
+  el.querySelector('.pick').addEventListener('click', () => togglePick(p.id));
   grid.appendChild(el);
-  cards.set(p.id, { el, play, pick, canvas: el.querySelector('.meter'), bar: el.querySelector('.prog i'), marks: [] });
+  cards.set(p.id, { el, play, pick: el.querySelector('.pick'), canvas: el.querySelector('.meter'), marks: [] });
 });
 
-/* Playback */
-let current = null, autoplay = false;
 function start(id) {
   stop(true);
   const ready = Audio.init();
-  const card = cards.get(id);
   ready.then(() => {
-    Audio.post({ t: 'preset', v: resolve(PRESETS.find((p) => p.id === id)) });
+    Audio.post({ t: 'preset', v: buildPreset(id, mix) });
     current = { id, t0: performance.now() + 120, i: 0 };
-    card.marks = [];
-    card.el.classList.add('playing');
-    card.play.innerHTML = stopIcon; card.play.setAttribute('aria-label', 'Stop');
-    status('Playing ' + PRESETS.find((p) => p.id === id).name);
+    const c = cards.get(id);
+    c.marks = []; c.el.classList.add('playing');
+    c.play.innerHTML = stopIcon; c.play.setAttribute('aria-label', 'Stop');
+    resetView(BY_ID[id].name);
   });
 }
 function stop(quiet) {
   if (current) {
     const c = cards.get(current.id);
-    c.el.classList.remove('playing'); c.play.innerHTML = playIcon;
-    c.play.setAttribute('aria-label', 'Play ' + PRESETS.find((p) => p.id === current.id).name);
-    c.bar.style.width = '0';
+    c.el.classList.remove('playing'); c.play.innerHTML = playIcon; c.play.setAttribute('aria-label', 'Play ' + BY_ID[current.id].name);
   }
-  current = null;
-  if (!quiet) { Audio.post({ t: 'panic' }); autoplay = false; status(''); }
+  current = null; progEl.style.width = '0';
+  if (!quiet) { Audio.post({ t: 'panic' }); autoplay = false; caret.remove(); idleView(); status(''); }
 }
 function onPops(list) {
   if (!current) return;
@@ -433,21 +651,19 @@ function onPops(list) {
 function tick(now) {
   if (current) {
     const el = now - current.t0;
-    while (current.i < EVENTS.length && EVENTS[current.i][0] <= el) {
-      const r = EVENTS[current.i++];
-      const ev = { agent: 'dsh', kind: KIND[r[1]], chars: r[2] || 0, h: r[3] || 0 };
-      Audio.post({ t: 'ev', ev });
-    }
-    const c = cards.get(current.id);
-    c.bar.style.width = Math.min(100, Math.max(0, el / CLIP_MS * 100)) + '%';
+    const ev = SESSION.events;
+    const stick = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 40;
+    while (current.i < ev.length && ev[current.i][0] <= el) dispatch(ev[current.i++], el);
+    if (stick) logEl.scrollTop = logEl.scrollHeight;
+    progEl.style.width = Math.min(100, Math.max(0, el / CLIP_MS * 100)) + '%';
     if (el > CLIP_MS) {
       const id = current.id;
       stop(true);
       if (autoplay) {
         const idx = PRESETS.findIndex((p) => p.id === id);
-        if (idx < PRESETS.length - 1) setTimeout(() => autoplay && start(PRESETS[idx + 1].id), 500);
+        if (idx < PRESETS.length - 1) setTimeout(() => autoplay && start(PRESETS[idx + 1].id), 600);
         else { autoplay = false; status('Played all 15'); }
-      } else status('');
+      }
     }
   }
   for (const c of cards.values()) drawMeter(c, now);
@@ -456,8 +672,7 @@ function tick(now) {
 
 let colors = {};
 function readColors() {
-  const cs = getComputedStyle(document.documentElement);
-  const g = (n) => cs.getPropertyValue(n).trim();
+  const cs = getComputedStyle(document.documentElement), g = (n) => cs.getPropertyValue(n).trim();
   colors = { text: g('--pop'), reasoning: g('--think'), tool_args: g('--tool'), cue: g('--fg'), line: g('--line') };
 }
 const SPAN = 2500;
@@ -466,67 +681,57 @@ function drawMeter(c, now) {
   if (!w) return;
   if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
   const g = cv.getContext('2d');
-  g.setTransform(dpr, 0, 0, dpr, 0, 0);
-  g.clearRect(0, 0, w, h);
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
   g.fillStyle = colors.line; g.fillRect(0, h / 2, w, 1);
   while (c.marks.length && c.marks[0][0] < now - SPAN) c.marks.shift();
   for (const [t, k] of c.marks) {
     const x = w - (now - t) / SPAN * w;
-    const y = k === 'reasoning' ? h * 0.72 : k === 'tool_args' ? h * 0.28 : h / 2;
+    const y = k === 'reasoning' ? h * 0.74 : k === 'tool_args' ? h * 0.26 : h / 2;
     g.beginPath();
-    if (k === 'cue') { g.strokeStyle = colors.cue; g.lineWidth = 1.5; g.arc(x, h / 2, 6, 0, Math.PI * 2); g.stroke(); }
-    else { g.fillStyle = colors[k]; g.arc(x, y, 3.2, 0, Math.PI * 2); g.fill(); }
+    if (k === 'cue') { g.strokeStyle = colors.cue; g.lineWidth = 1.5; g.arc(x, h / 2, 5.5, 0, Math.PI * 2); g.stroke(); }
+    else { g.fillStyle = colors[k]; g.arc(x, y, 3, 0, Math.PI * 2); g.fill(); }
   }
 }
 
 /* Picks */
-let picks = [];
-try { picks = JSON.parse(localStorage.getItem('tokenpop-picks') || '[]').filter((id) => cards.has(id)); } catch (e) { picks = []; }
-function savePicks() { try { localStorage.setItem('tokenpop-picks', JSON.stringify(picks)); } catch (e) {} }
-function togglePick(id) {
-  picks = picks.includes(id) ? picks.filter((x) => x !== id) : picks.concat(id);
-  savePicks(); renderPicks();
-}
+let picks = store.get('tokenpop-picks', []).filter((id) => BY_ID[id]);
+function togglePick(id) { picks = picks.includes(id) ? picks.filter((x) => x !== id) : picks.concat(id); store.set('tokenpop-picks', picks); renderPicks(); }
 function renderPicks() {
-  const box = document.getElementById('picks');
-  box.innerHTML = '<span class="label">Picks</span>' + (picks.length
-    ? picks.map((id, i) => '<span class="chip">' + (i + 1) + '. ' + PRESETS.find((p) => p.id === id).name + '</span>').join('')
+  document.getElementById('picks').innerHTML = '<span class="label">Picks</span>' + (picks.length
+    ? picks.map((id, i) => '<span class="chip">' + (i + 1) + '. ' + BY_ID[id].name + '</span>').join('')
     : '<span class="empty">Nothing picked yet</span>');
   for (const [id, c] of cards) {
     const on = picks.includes(id);
-    c.pick.setAttribute('aria-pressed', String(on));
-    c.pick.textContent = on ? '★ Picked' : '☆ Pick';
+    c.pick.setAttribute('aria-pressed', String(on)); c.pick.textContent = on ? '★ Picked' : '☆ Pick';
     c.el.classList.toggle('picked', on);
   }
 }
 function status(s) { document.getElementById('status').textContent = s; }
-
-document.getElementById('copy').addEventListener('click', () => {
-  const text = 'tokenpop picks: ' + (picks.length ? picks.map((id) => PRESETS.find((p) => p.id === id).name + ' (' + id + ')').join(', ') : '(none)');
-  const done = () => status('Copied');
-  try {
-    navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text));
-  } catch (e) { fallbackCopy(text); }
-});
-function fallbackCopy(text) {
-  const ta = document.createElement('textarea');
-  ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
-  document.body.appendChild(ta); ta.select();
-  let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
-  ta.remove();
-  status(ok ? 'Copied' : text);
+function summary() {
+  const lines = ['tokenpop picks: ' + (picks.length ? picks.map((id) => BY_ID[id].name + ' (' + id + ')').join(', ') : '(none)')];
+  const changed = LAYERS.filter((l) => { const m = mix[l.id]; return !m.on || m.src !== 'card' || m.level !== 100; });
+  lines.push('layers: ' + (changed.length ? changed.map((l) => {
+    const m = mix[l.id];
+    return l.label + '=' + (m.on ? (m.src === 'card' ? 'card voice' : BY_ID[m.src].name) + ' ' + m.level + '%' : 'off');
+  }).join(', ') : 'all on, card voice, 100%'));
+  return lines.join('\n');
 }
-document.getElementById('play-all').addEventListener('click', () => {
-  autoplay = true;
-  start(PRESETS[0].id);
-  status('Playing all 15 in order');
+document.getElementById('copy').addEventListener('click', () => {
+  const text = summary();
+  const fallback = () => {
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) {} ta.remove();
+    status(ok ? 'Copied' : text);
+  };
+  try { navigator.clipboard.writeText(text).then(() => status('Copied'), fallback); } catch (e) { fallback(); }
 });
+document.getElementById('play-all').addEventListener('click', () => { autoplay = true; start(PRESETS[0].id); status('Playing all 15 in order'); });
 document.getElementById('vol').addEventListener('input', (e) => {
   volume = e.target.value / 100;
   if (Audio.gain) Audio.gain.gain.setTargetAtTime(volToGain(volume), Audio.ctx.currentTime, 0.02);
 });
 
 readColors(); setInterval(readColors, 1000);
-renderPicks();
+renderMix(); renderPicks(); idleView();
 requestAnimationFrame(tick);
 </script>
